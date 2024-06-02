@@ -10,6 +10,8 @@
 
 int main()
 {
+    DataLoader<uint8_t, 28, 28, true> loader("../data/train-images-idx3-ubyte", "../data/train-labels-idx1-ubyte");
+    DataLoader<uint8_t, 28, 28, true> loader_test("../data/t10k-images-idx3-ubyte", "../data/t10k-labels-idx1-ubyte");
 
     srand(42);
 
@@ -22,15 +24,14 @@ int main()
 
     for (int step = 0; step < 100; step++)
     {
+        loader.reset();
 
-        DataLoader<uint8_t, 28, 28> loader("../data/train-images-idx3-ubyte", "../data/train-labels-idx1-ubyte");
+        double total_loss = 0;
+        int total_train = 0;
 
         while (!loader.eof())
         {
-            auto imgs = loader.read_images<1000>();
-            auto labels = loader.read_labels<1000>();
-
-            double total_loss = 0;
+            auto [imgs, labels] = loader.read<1000>();
 
             for (int i = 0; i < 1000; i++)
             {
@@ -60,27 +61,24 @@ int main()
                 // std::cout << l1r <<act << label;
 
                 total_loss += loss;
-                // if (std::isnan(loss))
-                // {
-                //     break;
-                // }
+                total_train++;
 
                 // std::cout << dloss << dl1 << std::endl;
 
                 l1.step(0.0001);
+
                 // l2.step(0.0001);
             }
-            std::cout << total_loss / 1000 << std::endl;
         }
 
-        DataLoader<uint8_t, 28, 28> loader_test("../data/t10k-images-idx3-ubyte", "../data/t10k-labels-idx1-ubyte");
+        std::cout << total_loss / total_train << " " << total_train << std::endl;
 
+        loader_test.reset();
         int correct = 0, total = 0;
 
         while (!loader_test.eof())
         {
-            auto imgs = loader_test.read_images<100>();
-            auto labels = loader_test.read_labels<100>();
+            auto [imgs, labels] = loader_test.read<100>();
 
             for (int i = 0; i < 100; i++)
             {
