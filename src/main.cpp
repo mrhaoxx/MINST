@@ -67,8 +67,8 @@ int main()
 
                 // std::cout << dloss << dl1 << std::endl;
 
-                l1.step(0.001);
-                l2.step(0.001);
+                l1.step(0.01);
+                l2.step(0.01);
             }
         }
 
