@@ -65,14 +65,6 @@ namespace nn :: function{
     }
             
 }
-class NeuralNetwork {
-public:
-    NeuralNetwork() {}
-
-
-private:
-
-};
 
 template<typename T, int RowN, int ColN, int ColN_B>
 class Linear {
