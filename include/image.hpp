@@ -13,7 +13,7 @@ template<typename raw_pixel, int ColN, int RowN>
 class Image : public Matrix<raw_pixel, ColN, RowN> {
 public:
     Image() {}
-    explicit Image(std::array<raw_pixel, ColN * RowN> pixels): Matrix<raw_pixel, ColN, RowN> (std::move(pixels)) {}
+    explicit Image(const std::array<raw_pixel, ColN * RowN>& pixels): Matrix<raw_pixel, ColN, RowN> (pixels) {}
     explicit Image(const Matrix<raw_pixel, ColN, RowN>& m): Matrix<raw_pixel, ColN, RowN> (m) {}
     ~Image() = default;
 

@@ -47,9 +47,8 @@ public:
             labels.read(reinterpret_cast<char*>(cache_labels.data()),number_of_images * sizeof(uint8_t));
         }
 
-        std::print("Number of images: {}\n", number_of_images);
-        std::print("Rows: {}\n", rows);
-        std::print("Cols: {}\n", cols);
+        std::print("File: {} {}\n", image_filename, label_filename);
+        std::print("Shape: {} - {} {}\n", number_of_images, rows,cols);
     };
 
 

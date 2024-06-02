@@ -192,3 +192,27 @@ public:
     }
 
 };
+
+
+
+template<typename T, int RowN, int ColN>
+class ReLU {
+public:
+    ReLU() {}
+    ~ReLU() = default;
+
+    Matrix<T, RowN, ColN> forward(const Matrix<T, RowN, ColN>& input) {
+        return nn::function::relu(input);
+    }
+
+    Matrix<T, RowN, ColN> backward(const Matrix<T, RowN, ColN>& input, const Matrix<T, RowN, ColN>& grad) {
+        Matrix<T, RowN, ColN> result;
+        for (int i = 0; i < RowN * ColN; i++) {
+            result.data[i] = input.data[i] > 0 ? grad.data[i] : 0;
+        }
+        return result;
+    }
+
+    void step(T learning_rate) {}
+    
+};
