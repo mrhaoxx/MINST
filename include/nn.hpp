@@ -52,6 +52,17 @@ namespace nn :: function{
         }
         return result;
     }
+
+    template<typename T, int RowN, int ColN>    
+    Matrix<T, RowN, ColN> relu(const Matrix<T, RowN, ColN>& m) {
+        Matrix<T, RowN, ColN> result;
+        for (int i = 0; i < RowN; i++) {
+            for (int j = 0; j < ColN; j++) {
+                result.data[i * ColN + j] = m.data[i * ColN + j] > 0 ? m.data[i * ColN + j] : 0;
+            }
+        }
+        return result;
+    }
             
 }
 class NeuralNetwork {
@@ -104,6 +115,42 @@ public:
     Matrix<T, ColN_B, ColN> bias;
     Matrix<T, RowN, ColN> weights_grad;
     Matrix<T, ColN_B, ColN> bias_grad;
+};
+
+template<typename T, int RowN, int ColN>
+class Dropout {
+public:
+    Dropout(int p):p(p) {
+        this->reset();
+    }
+    ~Dropout() = default;
+
+    Matrix<T, RowN, ColN> forward(const Matrix<T, RowN, ColN>& input) {
+        Matrix<T, RowN, ColN> result;
+        for (int i = 0; i < RowN * ColN; i++) {
+            result.data[i] = input.data[i] * dropout_mask.data[i];
+        }
+
+        return result;
+    }
+
+    Matrix<T, RowN, ColN> backward(const Matrix<T, RowN, ColN>& input, const Matrix<T, RowN, ColN>& grad) {
+        Matrix<T, RowN, ColN> result;
+        for (int i = 0; i < RowN * ColN; i++) {
+            result.data[i] = grad.data[i] * dropout_mask.data[i];
+        }
+        return result;
+    }
+
+    void reset() {
+        for (int i = 0; i < RowN * ColN; i++) {
+            dropout_mask.data[i] = (rand() % 100) < p ? 0 : 1;
+        }
+    }
+
+    int p;
+    Matrix<T, RowN, ColN> dropout_mask;
+    
 };
 
 template<typename T, int RowN, int ColN>

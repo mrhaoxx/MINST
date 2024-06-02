@@ -14,9 +14,12 @@ int main()
 
     DataLoader<uint8_t, 28, 28> loader_test("../data/t10k-images-idx3-ubyte", "../data/t10k-labels-idx1-ubyte");
 
-    srand(0);
-    Linear l1(random<double, 784, 10>(), random<double, 1, 10>());
+    srand(42);
+    Linear l1(random<double, 784, 128>(), random<double, 1, 128>());
+    Dropout<double,1,128> d1(20);
+    Linear l2(random<double, 128, 10>(), random<double, 1, 10>());
     Softmax<double, 1, 10> s1;
+
     CrossEntropy<double, 1, 10> ce;
 
     while (!loader.eof())
@@ -35,15 +38,20 @@ int main()
             auto b = labels[i];
             auto label = nn::function::onehot<double, 1, 10>(Matrix<double, 1, 1>({double(b)}));
             l1.zero_grad();
-
+            l2.zero_grad();
 
             auto l1r = l1.forward(p);
-            auto act = s1.forward(l1r);
+            auto l1r_ReLu = nn::function::relu(l1r);
+            auto l1d = d1.forward(l1r_ReLu);
+            auto l2r = l2.forward(l1d);
+            auto act = s1.forward(l2r);
             auto loss = ce.forward(act, label);
 
             auto dloss = ce.backward(act, label);
-            auto ds1 = s1.backward(l1r, dloss);
-            auto dl1 = l1.backward(p, ds1);
+            auto ds1 = s1.backward(l2r, dloss);
+            auto dl2 = l2.backward(l1d, ds1);
+            auto dl1d = d1.backward(l1r_ReLu, dl2);
+            auto dl1 = l1.backward(p, dl1d);
 
             // std::cout << img << int(b) << std::endl;
             // std::cout << l1r <<act << label;
@@ -56,7 +64,8 @@ int main()
 
             // std::cout << dloss << dl1 << std::endl;
 
-            l1.step(0.005);
+            l1.step(0.0001);
+            l2.step(0.0001);
         }
         std::cout << total_loss / 1000 << std::endl;
 
@@ -80,7 +89,10 @@ int main()
             auto label = nn::function::onehot<double, 1, 10>(Matrix<double, 1, 1>({double(b)}));
 
             auto l1r = l1.forward(p);
-            auto act = s1.forward(l1r);
+            auto l1r_ReLu = nn::function::relu(l1r);
+            auto l1d = d1.forward(l1r_ReLu);
+            auto l2r = l2.forward(l1d);
+            auto act = s1.forward(l2r);
             auto loss = ce.forward(act, label);
             
             auto max = act.data[0];
