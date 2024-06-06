@@ -53,16 +53,17 @@ int main()
                 auto dloss = ce.backward(act, label);
                 seq.backward(dloss);
 
-                // std::cout << img << int(b) << std::endl;
-                // std::cout << l1r <<act << label;
-
+                l1.step(0.001);
+                l2.step(0.001);
+       
                 total_loss += loss;
                 total_train++;
 
                 // std::cout << dloss << dl1 << std::endl;
+                // std::cout << img << int(b) << std::endl;
+                // std::cout << l1r <<act << label;
 
-                l1.step(0.001);
-                l2.step(0.0001);
+           
             }
         }
 

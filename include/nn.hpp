@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <cmath>
 #include <cstring>
+#include <utility>
 #include <map>
 #include "matrix.hpp"
 #include <any>
@@ -277,11 +278,14 @@ public:
         if constexpr (I < sizeof...(Layers)) {
             auto layer_input = std::any_cast<forward_input_type<typename std::tuple_element<I, std::tuple<Layers...>>::type >>(layer_inputs[I]);
             auto gradient_out = std::get<I>(layers).backward(layer_input, gradient);
+
             if constexpr (I > 0) {
                 return backward_helper<I-1>(gradient_out);
             } else {
                 return gradient_out;
             }
+        } else {
+            std::unreachable();
         }
     }
 
