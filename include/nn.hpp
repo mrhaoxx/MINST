@@ -222,6 +222,7 @@ public:
 };
 
 
+
 template<typename T>
 struct input_type_trait;
 
@@ -246,25 +247,25 @@ public:
 
     ~Sequential() = default;
 
+    template<int RowN, int ColN>
+    auto forward(const Matrix<double, RowN, ColN>& input) {
+        layer_inputs.clear();
+        layer_inputs.push_back(input);
+        return forward_helper(input, layers);
+    }
+
     template<std::size_t I = 0, typename Input, typename... T>
-    auto process_layer(Input&& input, std::tuple<T&...>& t) {
+    auto forward_helper(Input&& input, std::tuple<T&...>& t) {
         if constexpr (I < sizeof...(T)) {
             auto& layer = std::get<I>(t);
             if constexpr (I > 0) {
                 layer_inputs.push_back(input);
             }
             auto output = layer.forward(std::forward<Input>(input));
-            return process_layer<I + 1>(std::move(output), t);
+            return forward_helper<I + 1>(std::move(output), t);
         } else {
             return std::forward<Input>(input);
         }
-    }
-
-    template<int RowN, int ColN>
-    auto forward(const Matrix<double, RowN, ColN>& input) {
-        layer_inputs.clear();
-        layer_inputs.push_back(input);
-        return process_layer(input, layers);
     }
 
     template<typename Loss>
@@ -273,6 +274,7 @@ public:
         backward_helper<sizeof...(Layers)-1>(gradient);
         return gradient;
     }
+
     template<std::size_t I, typename Gradient>
     auto backward_helper(Gradient& gradient) {
         if constexpr (I < sizeof...(Layers)) {

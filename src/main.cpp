@@ -9,6 +9,7 @@
 #include <iostream>
 #include <vector>
 
+
 int main()
 {
     DataLoader<uint8_t, 28, 28, true> loader("../data/train-images-idx3-ubyte", "../data/train-labels-idx1-ubyte");
@@ -40,7 +41,9 @@ int main()
         }
     }
 
-    std::print("Loaded {} images\n", images_train.size());
+    std::print("Loaded {} images for train\n", images_train.size());
+    std::print("Loaded {} images for test\n", images_test.size());
+
     srand(42);
 
     Linear l1(random<double, 784, 128>(), random<double, 1, 128>());
@@ -65,9 +68,7 @@ int main()
 
             auto image = images_train[i];
             auto label = labels_train[i];
-            l1.zero_grad();
-            l2.zero_grad();
-
+         
             auto act = seq.forward(image);
             auto loss = ce.forward(act, label);
 
@@ -104,14 +105,13 @@ int main()
                 std::cout << "Predicted: " << max_idx << " Label: " << int(label) << std::endl;
                 std::cout << Image(image.reshape<28, 28>().scale<uint8_t>(255)) << std::endl;
                 std::cout << act << std::endl;
-
             }
             total++;
         }
-        
-        std::cout << "Step " << step << " Loss " << total_loss / total_train << std::endl;
 
-        std::cout << "verify " << correct << "/" << total << "  " << correct / float(total) << std::endl;
+        std::cout << "Step " << step << " Avg Loss " << total_loss / total_train << std::endl;
+
+        std::cout << "Verify " << correct << "/" << total << "  " << correct / float(total) << std::endl;
     }
     return 0;
 }
