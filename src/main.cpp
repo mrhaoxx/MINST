@@ -84,7 +84,6 @@ int main()
             // std::cout << l1r <<act << label;
         }
 
-        std::cout << "Step " << step << " Loss " << total_loss / total_train << std::endl;
 
         loader_test.reset();
         int correct = 0, total = 0;
@@ -101,9 +100,16 @@ int main()
             if (max_idx == label)
             {
                 correct++;
+            }else{
+                std::cout << "Predicted: " << max_idx << " Label: " << int(label) << std::endl;
+                std::cout << Image(image.reshape<28, 28>().scale<uint8_t>(255)) << std::endl;
+                std::cout << act << std::endl;
+
             }
             total++;
         }
+        
+        std::cout << "Step " << step << " Loss " << total_loss / total_train << std::endl;
 
         std::cout << "verify " << correct << "/" << total << "  " << correct / float(total) << std::endl;
     }
