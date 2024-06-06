@@ -9,9 +9,10 @@
 #include <cstring>
 #include <utility>
 #include <map>
-#include "matrix.hpp"
 #include <any>
 
+#include "matrix.hpp"
+#include "tensor.hpp"
 
 namespace nn :: function{
     template<typename T, int RowN, int ColN>
@@ -222,68 +223,30 @@ public:
 };
 
 
-template<typename T, int kh, int kw, int Stride>
+template<typename T,int in_channels, int out_channels, int kh, int kw, int Stride>
 class Conv2d {
 public:
     Conv2d() {}
     // Conv2d(const Matrix<T, KernelSize * KernelSize * InChannels, OutChannels>& w, const Matrix<T, 1, OutChannels>& b) : weights(w), bias(b){
     // }
     ~Conv2d() = default;
+    
+    template<int oh, int ow, int ImgH, int ImgW>
+    auto getIndexMatrix(const Tensor<in_channels, ImgH, ImgW>& in ,int i, int j) {
+        Tensor<T, oh, ow, in_channels * kh * kw> result;
 
-    template<int InRowN, int InColN>
-    auto forward(const Matrix<T, InRowN, InColN>& input) {
-        constexpr int oh = (InRowN - kh) / Stride + 1;
-        constexpr int ow = (InColN - kw) / Stride + 1;
-        Matrix<T, oh, ow> result;
-        // for (int i = 0; i < OutRowN; i++) {
-        //     for (int j = 0; j < OutColN; j++) {
-        //         T sum = 0;
-        //         for (int k = 0; k < KernelSize; k++) {
-        //             for (int l = 0; l < KernelSize; l++) {
-        //                 sum += input.data[(i * Stride + k) * InColN + j * Stride + l] * kernel.data[k * KernelSize + l];
-        //             }
-        //         }
-        //         result.data[i * OutColN + j] = sum;
-        //     }
-        // }
-        return result;
-    }
-
-    // //backward
-    // template<int InRowN, int InColN>
-    // auto backward(const Matrix<T, InRowN, InColN>& input, const Matrix<T, InRowN, InColN>& grad) {
-    //     constexpr int oh = (InRowN - kh) / Stride + 1;
-    //     constexpr int ow = (InColN - kw) / Stride + 1;
-    //     Matrix<T, KernelSize, KernelSize> kernel_grad;
-    //     for (int i = 0; i < KernelSize; i++) {
-    //         for (int j = 0; j < KernelSize; j++) {
-    //             T sum = 0;
-    //             for (int k = 0; k < OutRowN; k++) {
-    //                 for (int l = 0; l < OutColN; l++) {
-    //                     sum += input.data[(k * Stride + i) * InColN + l * Stride + j] * grad.data[k * OutColN + l];
-    //                 }
-    //             }
-    //             kernel_grad.data[i * KernelSize + j] = sum;
-    //         }
-    //     }
-    //     return kernel_grad;
-    // }
-
-    template<int scale, int dh, int dw>
-    auto dilate() {
-        constexpr int OutRowN = (kh - 1) * dh + 1;
-        constexpr int OutColN = (kw - 1) * dw + 1;
-        Matrix<T, OutRowN, OutColN> result;
-        for (int i = 0; i < kh; i++) {
-            for (int j = 0; j < kw; j++) {
-                result.data[i * dh * OutColN + j * dw] = kernel.data[i * kw + j];
+        for (int x = 0; x < oh; x++) {
+            for (int y = 0; y < ow; y++) {
+                result.get(x, y) = in.crop<kh, kw>(i + x * Stride, j + y * Stride).reshape<1, in_channels * kh * kw>();
             }
         }
+        
+        return result;
     }
 
 
 // private:
-    Matrix<T, kh, kw> kernel;
+    Tensor<T, in_channels,kh, kw> kernel;
 
 };
 

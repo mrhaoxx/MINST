@@ -9,11 +9,13 @@
 
 #include <iostream>
 
+#include <tensor.hpp>
+
 template<typename T, int RowN, int ColN>
-class Matrix {
+class Matrix : public Tensor<T, RowN, ColN>{
 public:
-    Matrix() : data(){}
-    explicit Matrix(std::array<T, ColN * RowN> data): data(std::move(data)) {}
+    Matrix() : Tensor<T, RowN, ColN>() {}
+    explicit Matrix(std::array<T, ColN * RowN> data): Tensor<T, RowN, ColN>(data) {}
     virtual ~Matrix() = default;
 
     template<int RowN_B, int ColN_B>
@@ -26,7 +28,7 @@ public:
             for (int j = 0; j < ColN_B; j++) {
                 T sum = 0;
                 for (int k = 0; k < ColN; k++) {
-                    sum += data[i * ColN + k] * other.data[k * ColN_B + j];
+                    sum += this->data[i * ColN + k] * other.data[k * ColN_B + j];
                 }
                 result.data[i * ColN_B + j] = sum;
             }
@@ -37,7 +39,7 @@ public:
 
     Matrix& operator*= (const T& scalar) {
         for (int i = 0; i < RowN * ColN; i++) {
-            data[i] *= scalar;
+            this->data[i] *= scalar;
         }
         return *this;
     }
@@ -45,7 +47,7 @@ public:
     Matrix operator* (const T& scalar) const {
         Matrix result;
         for (int i = 0; i < RowN * ColN; i++) {
-            result.data[i] = data[i] * scalar;
+            result.data[i] = this->data[i] * scalar;
         }
         return result;
     }
@@ -55,7 +57,7 @@ public:
         Matrix result;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
-                result.data[i * ColN + j] = data[i * ColN + j] + other.data[i * ColN + j];
+                result.data[i * ColN + j] = this->data[i * ColN + j] + other.data[i * ColN + j];
             }
         }
         return result;
@@ -64,7 +66,7 @@ public:
     Matrix<T,RowN,ColN>& operator+= (const Matrix& other) {
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
-                data[i * ColN + j] += other.data[i * ColN + j];
+                this->data[i * ColN + j] += other.data[i * ColN + j];
             }
         }
         return *this;
@@ -73,7 +75,7 @@ public:
     Matrix<T,RowN,ColN>& operator-= (const Matrix& other) {
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
-                data[i * ColN + j] -= other.data[i * ColN + j];
+                this->data[i * ColN + j] -= other.data[i * ColN + j];
             }
         }
         return *this;
@@ -83,7 +85,7 @@ public:
         Matrix<T,ColN,RowN> result;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
-                result.data[j * RowN + i] = data[i * ColN + j];
+                result.data[j * RowN + i] = this->data[i * ColN + j];
             }
         }
         return result;
@@ -94,7 +96,7 @@ public:
         static_assert(RowN == 1 || ColN == 1);
         U sum = 0;
         for (int i = 0; i < RowN * ColN; i++) {
-            sum += data[i];
+            sum += this->data[i];
         }
         return sum;
     }
@@ -103,7 +105,7 @@ public:
     Matrix<U, RowN, ColN> scale(U scalar) {
         Matrix<U, RowN, ColN> result;
         for (int i = 0; i < RowN * ColN; i++) {
-            result.data[i] = data[i] * scalar;
+            result.data[i] = this->data[i] * scalar;
         }
         return result;
     }
@@ -112,24 +114,44 @@ public:
         Matrix<T, RowN, ColN> result;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
-                result.data[i * ColN + j] = data[(RowN - i - 1) * ColN + (ColN - j - 1)];
+                result.data[i * ColN + j] = this->data[(RowN - i - 1) * ColN + (ColN - j - 1)];
             }
         }
         return result;
     }
    
-
+    template<int width, int height>
+    Matrix<T, width, height> crop(int x, int y) {
+        static_assert(width <= RowN && height <= ColN);
+        Matrix<T, width, height> result;
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                result.data[i * height + j] = this->data[(i + x) * ColN + (j + y)];
+            }
+        }
+        return result;
+    }
 
     template<int Row_B, int ColN_B>
     Matrix<T, Row_B,ColN_B> reshape() {
         static_assert(RowN * ColN == Row_B * ColN_B);
-        return Matrix<T, Row_B, ColN_B>(data);
+        return Matrix<T, Row_B, ColN_B>(this->data);
     }
 
+
+    // template<int oh, int ow>
+    // Matrix<Matrix<T, 1, kh * kw>, oh, ow> getIndexMatrix(int i, int j) {
+    //     Matrix<Matrix<T, 1, kh * kw>, oh, ow> result;
+    //     for (int k = 0; k < oh; k++) {
+    //         for (int l = 0; l < ow; l++) {
+    //             result.data[k * ow + l] = crop<kh, kw>(i + k, j + l);
+    //         }
+    //     }
+        
+    //     return result;
+    // }
     // friend std::ostream& operator<<<>(std::ostream& os, const Matrix<T,RowN,ColN>& p);
 
-// private:
-    std::array<T, ColN * RowN> data;
 };
 
 template<typename T, int RowN, int ColN>
