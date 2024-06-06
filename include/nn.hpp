@@ -222,6 +222,70 @@ public:
 };
 
 
+template<typename T, int kh, int kw, int Stride>
+class Conv2d {
+public:
+    Conv2d() {}
+    // Conv2d(const Matrix<T, KernelSize * KernelSize * InChannels, OutChannels>& w, const Matrix<T, 1, OutChannels>& b) : weights(w), bias(b){
+    // }
+    ~Conv2d() = default;
+
+    template<int InRowN, int InColN>
+    auto forward(const Matrix<T, InRowN, InColN>& input) {
+        constexpr int oh = (InRowN - kh) / Stride + 1;
+        constexpr int ow = (InColN - kw) / Stride + 1;
+        Matrix<T, oh, ow> result;
+        // for (int i = 0; i < OutRowN; i++) {
+        //     for (int j = 0; j < OutColN; j++) {
+        //         T sum = 0;
+        //         for (int k = 0; k < KernelSize; k++) {
+        //             for (int l = 0; l < KernelSize; l++) {
+        //                 sum += input.data[(i * Stride + k) * InColN + j * Stride + l] * kernel.data[k * KernelSize + l];
+        //             }
+        //         }
+        //         result.data[i * OutColN + j] = sum;
+        //     }
+        // }
+        return result;
+    }
+
+    // //backward
+    // template<int InRowN, int InColN>
+    // auto backward(const Matrix<T, InRowN, InColN>& input, const Matrix<T, InRowN, InColN>& grad) {
+    //     constexpr int oh = (InRowN - kh) / Stride + 1;
+    //     constexpr int ow = (InColN - kw) / Stride + 1;
+    //     Matrix<T, KernelSize, KernelSize> kernel_grad;
+    //     for (int i = 0; i < KernelSize; i++) {
+    //         for (int j = 0; j < KernelSize; j++) {
+    //             T sum = 0;
+    //             for (int k = 0; k < OutRowN; k++) {
+    //                 for (int l = 0; l < OutColN; l++) {
+    //                     sum += input.data[(k * Stride + i) * InColN + l * Stride + j] * grad.data[k * OutColN + l];
+    //                 }
+    //             }
+    //             kernel_grad.data[i * KernelSize + j] = sum;
+    //         }
+    //     }
+    //     return kernel_grad;
+    // }
+
+    template<int scale, int dh, int dw>
+    auto dilate() {
+        constexpr int OutRowN = (kh - 1) * dh + 1;
+        constexpr int OutColN = (kw - 1) * dw + 1;
+        Matrix<T, OutRowN, OutColN> result;
+        for (int i = 0; i < kh; i++) {
+            for (int j = 0; j < kw; j++) {
+                result.data[i * dh * OutColN + j * dw] = kernel.data[i * kw + j];
+            }
+        }
+    }
+
+
+// private:
+    Matrix<T, kh, kw> kernel;
+
+};
 
 template<typename T>
 struct input_type_trait;
@@ -269,10 +333,8 @@ public:
     }
 
     template<typename Loss>
-    [[maybe_unused]] auto backward(Loss&& loss) {
-        auto gradient = std::forward<Loss>(loss);
-        backward_helper<sizeof...(Layers)-1>(gradient);
-        return gradient;
+    [[maybe_unused]] auto backward(Loss&& loss) {        
+        return backward_helper<sizeof...(Layers)-1>(loss);
     }
 
     template<std::size_t I, typename Gradient>

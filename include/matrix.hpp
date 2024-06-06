@@ -107,6 +107,16 @@ public:
         }
         return result;
     }
+
+    Matrix<T, RowN, ColN> rotate() {
+        Matrix<T, RowN, ColN> result;
+        for (int i = 0; i < RowN; i++) {
+            for (int j = 0; j < ColN; j++) {
+                result.data[i * ColN + j] = data[(RowN - i - 1) * ColN + (ColN - j - 1)];
+            }
+        }
+        return result;
+    }
    
 
 
@@ -140,3 +150,4 @@ Matrix<T, RowN, ColN> random() {
     }
     return result;
 }
+
