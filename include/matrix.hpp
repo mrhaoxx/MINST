@@ -113,9 +113,7 @@ public:
     template<int Row_B, int ColN_B>
     Matrix<T, Row_B,ColN_B> reshape() {
         static_assert(RowN * ColN == Row_B * ColN_B);
-        Matrix<T, Row_B, ColN_B> result;
-        std::memcpy(result.data.data(), data.data(), sizeof(T) * Row_B * ColN_B);
-        return result;
+        return Matrix<T, Row_B, ColN_B>(data);
     }
 
     // friend std::ostream& operator<<<>(std::ostream& os, const Matrix<T,RowN,ColN>& p);

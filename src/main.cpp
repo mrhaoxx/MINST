@@ -22,6 +22,8 @@ int main()
     Softmax<double, 1, 10> s1;
 
     CrossEntropy<double, 1, 10> ce;
+    
+    Sequential seq(l1, r1, d1, l2, s1);
 
     for (int step = 0; step < 100; step++)
     {
@@ -45,19 +47,11 @@ int main()
                 l1.zero_grad();
                 l2.zero_grad();
 
-                auto l1r = l1.forward(p);
-                auto r1r = r1.forward(l1r);
-                auto l1d = d1.forward(r1r);
-                auto l2r = l2.forward(l1d);
-                auto act = s1.forward(l2r);
+                auto act = seq.forward(p);
                 auto loss = ce.forward(act, label);
 
                 auto dloss = ce.backward(act, label);
-                auto ds1 = s1.backward(l2r, dloss);
-                auto dl2 = l2.backward(l1d, ds1);
-                auto dl1d = d1.backward(r1r, dl2);
-                auto dr1 = r1.backward(l1r, dl1d);
-                auto dl1 = l1.backward(p, dr1);
+                seq.backward(dloss);
 
                 // std::cout << img << int(b) << std::endl;
                 // std::cout << l1r <<act << label;
@@ -68,7 +62,7 @@ int main()
                 // std::cout << dloss << dl1 << std::endl;
 
                 l1.step(0.001);
-                l2.step(0.001);
+                l2.step(0.0001);
             }
         }
 
@@ -88,14 +82,7 @@ int main()
                 auto p = img.reshape<1, 784>().scale(1.0 / 255.0);
 
                 auto b = labels[i];
-                auto label = nn::function::onehot<double, 1, 10>(Matrix<double, 1, 1>({double(b)}));
-
-                auto l1r = l1.forward(p);
-                auto l1r_ReLu = r1.forward(l1r);
-                auto l1d = d1.forward(l1r_ReLu);
-                auto l2r = l2.forward(l1d);
-                auto act = s1.forward(l2r);
-                auto loss = ce.forward(act, label);
+                auto act = seq.forward(p);
 
                 auto max = act.data[0];
                 int max_idx = 0;
