@@ -45,14 +45,11 @@ int main()
     std::print("Loaded {} images for test\n", images_test.size());
 
     srand(42);
-    // std::cout << Tensor<double,1,1,2,3>({1.111,2.2131,3.123,4,5,6}) << std::endl;
-    // std::cout << Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>().transpose()<< std::endl;
-
-    // std::cout <<  (Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>() * Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<2,3>())<< std::endl;
 
     Conv2d<double, 1, 32, 3, 3, 1, 1> c1(random<double, 32, 9>());
 
-    // std::cout << c1.forward(images_train[0].template Tensor::reshape<1, 28, 28>());
+    auto ttt =  c1.forward(images_train[0].reshape<1, 28, 28>());
+    std::cout << ttt;
 
     Linear l1(random<double, 784, 128>(), random<double, 1, 128>());
     ReLU<double, 1, 128> r1;
@@ -82,8 +79,8 @@ int main()
 
             seq.backward(ce.backward(act, label));
 
-            l1.step(0.001);
-            l2.step(0.001);
+            l1.step(0.005);
+            l2.step(0.005);
 
             total_loss += loss;
             total_train++;

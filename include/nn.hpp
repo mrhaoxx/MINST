@@ -259,12 +259,15 @@ public:
 
         const auto MFAT = FA.template reshape<oh * ow, c * kh * kw>().transpose();
 
-        auto FAT = Tensor(MFAT.template reshape<c * kh * kw ,oh * ow>());
+        auto FAT = MFAT.template reshape<c * kh * kw ,oh * ow>();
 
         auto result = kernel * FAT;
 
-        return result;
+        return result.template reshape<oc, oh, ow>();
     }
+
+    template<int h, int w>
+    
 
 // private:
     Tensor<T, oc, c * kh * kw> kernel;
