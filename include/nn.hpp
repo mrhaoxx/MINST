@@ -11,7 +11,6 @@
 #include <map>
 #include <any>
 
-#include "Tensor.hpp"
 #include "tensor.hpp"
 
 namespace nn :: function{
@@ -267,7 +266,25 @@ public:
     }
 
     template<int h, int w>
-    
+    auto backward(const Tensor<T, c, h, w>& input, const Tensor<T, oc, h, w>& grad) {
+        constexpr int oh = (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1;
+        constexpr int ow = (w + 2 * pw - ((kw - 1)*dw + 1)) / sw + 1;
+
+        const auto FA = this->_get_blocks(input).template reshape<oh, ow, c * kh * kw>();;
+
+        const auto MFAT = FA.template reshape<oh * ow, c * kh * kw>().transpose();
+
+        auto FAT = MFAT.template reshape<c * kh * kw ,oh * ow>();
+
+        auto result = kernel * FAT;
+
+        auto grad_reshaped = grad.template reshape<oc, oh * ow>();
+
+        auto kernel_grad = grad_reshaped * FAT.transpose();
+
+        return kernel_grad.template reshape<oc, c, kh, kw>();
+    }
+
 
 // private:
     Tensor<T, oc, c * kh * kw> kernel;

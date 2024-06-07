@@ -3,12 +3,13 @@
 #include "image.hpp"
 #include "dataloader.hpp"
 
-#include "Tensor.hpp"
+#include "tensor.hpp"
 #include "nn.hpp"
 
 #include <iostream>
 #include <vector>
 
+#include <mdspan>
 
 int main()
 {

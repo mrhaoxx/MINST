@@ -37,11 +37,11 @@ public:
     auto operator* (const Tensor<T, dimsB...>& other)  const{
         static_assert(sizeof...(dims) == 2);
         static_assert(sizeof...(dimsB) == 2);
-        static_assert(other.dimensions[0] == dimensions[sizeof...(dims) - 1]);
+        static_assert(std::get<0>(std::make_tuple(dimsB...)) == dimensions[sizeof...(dims) - 1]);
         
         constexpr int rows = dimensions[0];
         constexpr int cols = dimensions[1];
-        constexpr int colsB = other.dimensions[1];
+        constexpr int colsB = std::get<1>(std::make_tuple(dimsB...));
 
         std::array<T, rows * colsB> result_data;
 
