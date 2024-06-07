@@ -146,24 +146,34 @@ public:
 
         return Tensor<T, cols, rows>(transposed_data);
     }
+
+    std::ostream&  print(std::ostream& os, const std::string& indent = "", int depth = 0, int w = 4) const {
+        os << indent << "[";
+        if constexpr (sizeof...(dims) > 1) {
+            os << "\n";
+            for (int i = 0; i < dimensions[0]; ++i) {
+                auto subTensor = extractSubdimension(i);
+                subTensor.print(os, indent + "  ", depth + 1);
+                if (i < dimensions[0] - 1) std::cout << ",";
+                os << "\n";
+            }
+            std::cout << indent;
+        } else {
+            for (int i = 0; i < dimensions[0]; ++i) {
+                std::cout << " " << std::setw(w) << data[i];
+            }
+        }
+        os << "]";
+        
+        return os;
+    }
+
 };
 
 
 template<typename T, int ...dims>
 std::ostream& operator<<(std::ostream& os, const Tensor<T, dims...>& p) {
-    if constexpr (sizeof...(dims) == 1) {
-        for (int i = 0; i < p.template shape<0>(); i++) {
-            os << p.data[i] << " ";
-        }
-        os << "\n";
-    } else {
-        for (int i = 0; i < p.template shape<0>(); i++) {
-            os << "[\n";
-            os << p.extractSubdimension(i);
-            os << "]\n";
-        }
-    }
-    return os;
+    return p.print(os);
 }
 
 

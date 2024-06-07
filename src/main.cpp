@@ -45,10 +45,10 @@ int main()
     std::print("Loaded {} images for test\n", images_test.size());
 
     srand(42);
+    // std::cout << Tensor<double,1,1,2,3>({1.111,2.2131,3.123,4,5,6}) << std::endl;
+    // std::cout << Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>().transpose()<< std::endl;
 
-    std::cout << Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>().transpose() << std::endl;
-
-    std::cout << Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>() * Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<2,3>() << std::endl;
+    // std::cout <<  (Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>() * Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<2,3>())<< std::endl;
 
     Conv2d<double, 1, 32, 3, 3, 1, 1> c1(random<double, 32, 9>());
 
