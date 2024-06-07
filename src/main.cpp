@@ -3,7 +3,7 @@
 #include "image.hpp"
 #include "dataloader.hpp"
 
-#include "matrix.hpp"
+#include "Tensor.hpp"
 #include "nn.hpp"
 
 #include <iostream>
@@ -15,10 +15,10 @@ int main()
     DataLoader<uint8_t, 28, 28, true> loader("../data/train-images-idx3-ubyte", "../data/train-labels-idx1-ubyte");
     DataLoader<uint8_t, 28, 28, true> loader_test("../data/t10k-images-idx3-ubyte", "../data/t10k-labels-idx1-ubyte");
 
-    std::vector<Matrix<double, 1, 784>> images_train;
-    std::vector<Matrix<double, 1, 10>> labels_train;
+    std::vector<Tensor<double, 1, 784>> images_train;
+    std::vector<Tensor<double, 1, 10>> labels_train;
 
-    std::vector<Matrix<double, 1, 784>> images_test;
+    std::vector<Tensor<double, 1, 784>> images_test;
     std::vector<uint8_t> labels_test;
 
     while (!loader.eof())
@@ -27,7 +27,7 @@ int main()
         for (int i = 0; i < 1000; i++)
         {
             images_train.push_back(Image<uint8_t, 28, 28>(imgs[i]).reshape<1, 784>().scale(1.0 / 255.0));
-            labels_train.push_back(nn::function::onehot<double, 1, 10>(Matrix<double, 1, 1>({double(labels[i])})));
+            labels_train.push_back(nn::function::onehot<double, 1, 10>(Tensor<double, 1, 1>({double(labels[i])})));
         }
     }
 
@@ -45,6 +45,14 @@ int main()
     std::print("Loaded {} images for test\n", images_test.size());
 
     srand(42);
+
+    std::cout << Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>().transpose() << std::endl;
+
+    std::cout << Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<3,2>() * Tensor<int,1,1,2,3>({1,2,3,4,5,6}).reshape<2,3>() << std::endl;
+
+    Conv2d<double, 1, 32, 3, 3, 1, 1> c1(random<double, 32, 9>());
+
+    // std::cout << c1.forward(images_train[0].template Tensor::reshape<1, 28, 28>());
 
     Linear l1(random<double, 784, 128>(), random<double, 1, 128>());
     ReLU<double, 1, 128> r1;

@@ -6,15 +6,15 @@
 #include <iomanip>
 
 
-#include "matrix.hpp"
+#include "tensor.hpp"
 
 
 template<typename raw_pixel, int ColN, int RowN>
-class Image : public Matrix<raw_pixel, ColN, RowN> {
+class Image : public Tensor<raw_pixel, ColN, RowN> {
 public:
     Image() {}
-    explicit Image(const std::array<raw_pixel, ColN * RowN>& pixels): Matrix<raw_pixel, ColN, RowN> (pixels) {}
-    explicit Image(const Matrix<raw_pixel, ColN, RowN>& m): Matrix<raw_pixel, ColN, RowN> (m) {}
+    explicit Image(const std::array<raw_pixel, ColN * RowN>& pixels): Tensor<raw_pixel, ColN, RowN> (pixels) {}
+    explicit Image(const Tensor<raw_pixel, ColN, RowN>& m): Tensor<raw_pixel, ColN, RowN> (m) {}
     ~Image() = default;
 
 };

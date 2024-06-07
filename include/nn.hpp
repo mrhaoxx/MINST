@@ -11,13 +11,13 @@
 #include <map>
 #include <any>
 
-#include "matrix.hpp"
+#include "Tensor.hpp"
 #include "tensor.hpp"
 
 namespace nn :: function{
     template<typename T, int RowN, int ColN>
-    Matrix<T, RowN, ColN> softmax(const Matrix<T, RowN, ColN>& m) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> softmax(const Tensor<T, RowN, ColN>& m) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN; i++) {
             T max = m.data[i * ColN];
             for (int j = 1; j < ColN; j++) {
@@ -37,8 +37,8 @@ namespace nn :: function{
         return result;
     }
     template<typename T, int RowN, int ColN>
-    Matrix<T, RowN, ColN> softmax_prime(const Matrix<T, RowN, ColN>& m) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> softmax_prime(const Tensor<T, RowN, ColN>& m) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
                 result.data[i * ColN + j] = m.data[i * ColN + j] * (1 - m.data[i * ColN + j]);
@@ -48,8 +48,8 @@ namespace nn :: function{
     }
     
     template<typename T, int RowN, int ColN>
-    Matrix<T, RowN, ColN> onehot(const Matrix<T, RowN, 1>& m) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> onehot(const Tensor<T, RowN, 1>& m) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
                 result.data[i * ColN + j] = (j == m.data[i]);
@@ -59,8 +59,8 @@ namespace nn :: function{
     }
 
     template<typename T, int RowN, int ColN>    
-    Matrix<T, RowN, ColN> relu(const Matrix<T, RowN, ColN>& m) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> relu(const Tensor<T, RowN, ColN>& m) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
                 result.data[i * ColN + j] = m.data[i * ColN + j] > 0 ? m.data[i * ColN + j] : 0;
@@ -75,19 +75,19 @@ template<typename T, int RowN, int ColN, int ColN_B>
 class Linear {
 public:
     Linear() {
-        weights = Matrix<T, RowN, ColN>(std::array<T, RowN * ColN>());
-        bias = Matrix<T, ColN_B, ColN>(std::array<T, ColN * ColN_B>());
+        weights = Tensor<T, RowN, ColN>(std::array<T, RowN * ColN>());
+        bias = Tensor<T, ColN_B, ColN>(std::array<T, ColN * ColN_B>());
     }
-    Linear(const Matrix<T, RowN, ColN>& w, const Matrix<T, ColN_B, ColN>& b) : weights(w), bias(b){
+    Linear(const Tensor<T, RowN, ColN>& w, const Tensor<T, ColN_B, ColN>& b) : weights(w), bias(b){
     }
     ~Linear() = default;
 
-    Matrix<T, ColN_B, ColN> forward(const Matrix<T, ColN_B, RowN>& input) {
+    Tensor<T, ColN_B, ColN> forward(const Tensor<T, ColN_B, RowN>& input) {
         return input * weights + bias;
     }
 
     //backward
-    Matrix<T, ColN_B, RowN> backward(const Matrix<T, ColN_B, RowN>& input, const Matrix<T,ColN_B, ColN>& grad) {
+    Tensor<T, ColN_B, RowN> backward(const Tensor<T, ColN_B, RowN>& input, const Tensor<T,ColN_B, ColN>& grad) {
         weights_grad = input.transpose() * grad;
         bias_grad = grad;
         return grad * weights.transpose();
@@ -108,10 +108,10 @@ public:
 
 
 // private:
-    Matrix<T, RowN, ColN> weights;
-    Matrix<T, ColN_B, ColN> bias;
-    Matrix<T, RowN, ColN> weights_grad;
-    Matrix<T, ColN_B, ColN> bias_grad;
+    Tensor<T, RowN, ColN> weights;
+    Tensor<T, ColN_B, ColN> bias;
+    Tensor<T, RowN, ColN> weights_grad;
+    Tensor<T, ColN_B, ColN> bias_grad;
 };
 
 template<typename T, int RowN, int ColN>
@@ -122,8 +122,8 @@ public:
     }
     ~Dropout() = default;
 
-    Matrix<T, RowN, ColN> forward(const Matrix<T, RowN, ColN>& input) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> forward(const Tensor<T, RowN, ColN>& input) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN * ColN; i++) {
             result.data[i] = input.data[i] * dropout_mask.data[i];
         }
@@ -131,8 +131,8 @@ public:
         return result;
     }
 
-    Matrix<T, RowN, ColN> backward(const Matrix<T, RowN, ColN>& input, const Matrix<T, RowN, ColN>& grad) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& grad) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN * ColN; i++) {
             result.data[i] = grad.data[i] * dropout_mask.data[i];
         }
@@ -146,7 +146,7 @@ public:
     }
 
     int p;
-    Matrix<T, RowN, ColN> dropout_mask;
+    Tensor<T, RowN, ColN> dropout_mask;
     
 };
 
@@ -156,11 +156,11 @@ public:
     Softmax() {}
     ~Softmax() = default;
 
-    Matrix<T, RowN, ColN> forward(const Matrix<T, RowN, ColN>& input) {
+    Tensor<T, RowN, ColN> forward(const Tensor<T, RowN, ColN>& input) {
         return nn::function::softmax(input);
     }
 
-    Matrix<T, RowN, ColN> backward(const Matrix<T, RowN, ColN>& input, const Matrix<T, RowN, ColN>& grad) {
+    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& grad) {
         return grad;
     }
 
@@ -175,7 +175,7 @@ public:
     CrossEntropy() {}
     ~CrossEntropy() = default;
 
-    T forward(const Matrix<T, RowN, ColN>& input, const Matrix<T, RowN, ColN>& target) {
+    T forward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& target) {
         T loss = 0;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
@@ -186,8 +186,8 @@ public:
     }
 
     //backward
-    Matrix<T, RowN, ColN> backward(const Matrix<T, RowN, ColN>& input, const Matrix<T, RowN, ColN>& target) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& target) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN; i++) {
             for (int j = 0; j < ColN; j++) {
                 result.data[i * ColN + j] = -target.data[i * ColN + j] + input.data[i * ColN + j];
@@ -206,12 +206,12 @@ public:
     ReLU() {}
     ~ReLU() = default;
 
-    Matrix<T, RowN, ColN> forward(const Matrix<T, RowN, ColN>& input) {
+    Tensor<T, RowN, ColN> forward(const Tensor<T, RowN, ColN>& input) {
         return nn::function::relu(input);
     }
 
-    Matrix<T, RowN, ColN> backward(const Matrix<T, RowN, ColN>& input, const Matrix<T, RowN, ColN>& grad) {
-        Matrix<T, RowN, ColN> result;
+    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& grad) {
+        Tensor<T, RowN, ColN> result;
         for (int i = 0; i < RowN * ColN; i++) {
             result.data[i] = input.data[i] > 0 ? grad.data[i] : 0;
         }
@@ -223,30 +223,51 @@ public:
 };
 
 
-template<typename T,int in_channels, int out_channels, int kh, int kw, int Stride>
+template<typename T,int c /* in_channels */, int oc /* out_channels */, int kh, int kw, int sh, int sw, int ph = 0, int pw = 0, int dh = 1,int dw = 1>
 class Conv2d {
 public:
     Conv2d() {}
-    // Conv2d(const Matrix<T, KernelSize * KernelSize * InChannels, OutChannels>& w, const Matrix<T, 1, OutChannels>& b) : weights(w), bias(b){
-    // }
+    Conv2d(const Tensor<T, oc, c * kh * kw>& kernel) : kernel(kernel) {}
     ~Conv2d() = default;
-    
-    template<int oh, int ow, int ImgH, int ImgW>
-    auto getIndexMatrix(const Tensor<in_channels, ImgH, ImgW>& in ,int i, int j) {
-        Tensor<T, oh, ow, in_channels * kh * kw> result;
 
-        for (int x = 0; x < oh; x++) {
-            for (int y = 0; y < ow; y++) {
-                result.get(x, y) = in.crop<kh, kw>(i + x * Stride, j + y * Stride).reshape<1, in_channels * kh * kw>();
+    template<int h, int w>
+    auto _get_blocks(const Tensor<T, c, h, w>& input) {
+        constexpr int oh = (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1;
+        constexpr int ow = (w + 2 * pw - ((kw - 1)*dw + 1)) / sw + 1;
+        Tensor<T, oh, ow, c, kh * kw> _tmp;
+        for (int i = 0; i < oh; i++) {
+            for (int j = 0; j < ow; j++) { // feature map
+                for (int k = 0; k < c; k++){
+                    std::memcpy(
+                        &_tmp.data[i * ow * c * kh * kw + j * c * kh * kw + k * kh * kw], 
+                        &input.data[k * h * w + i * sh * w + j * sw], 
+                        kh * kw * sizeof(T)
+                        );
+                }
+
             }
         }
-        
+        return _tmp;
+    }
+    
+    template<int h, int w>
+    auto forward(const Tensor<T, c, h, w>& input) {
+        constexpr int oh = (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1;
+        constexpr int ow = (w + 2 * pw - ((kw - 1)*dw + 1)) / sw + 1;
+
+        const auto FA = this->_get_blocks(input).template reshape<oh, ow, c * kh * kw>();;
+
+        const auto MFAT = FA.template reshape<oh * ow, c * kh * kw>().transpose();
+
+        auto FAT = Tensor(MFAT.template reshape<c * kh * kw ,oh * ow>());
+
+        auto result = kernel * FAT;
+
         return result;
     }
 
-
 // private:
-    Tensor<T, in_channels,kh, kw> kernel;
+    Tensor<T, oc, c * kh * kw> kernel;
 
 };
 
@@ -275,7 +296,7 @@ public:
     ~Sequential() = default;
 
     template<int RowN, int ColN>
-    auto forward(const Matrix<double, RowN, ColN>& input) {
+    auto forward(const Tensor<double, RowN, ColN>& input) {
         layer_inputs.clear();
         layer_inputs.push_back(input);
         return forward_helper(input, layers);
