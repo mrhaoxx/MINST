@@ -9,9 +9,6 @@
 #include <iostream>
 #include <vector>
 
-#include <mdspan>
-
-
 int main()
 {
 

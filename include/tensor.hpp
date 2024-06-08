@@ -2,6 +2,7 @@
 
 #include <array>
 #include <tuple>
+#include <memory>
 #include <cassert>
 #include <iostream>
 
