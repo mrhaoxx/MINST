@@ -10,8 +10,42 @@
 #include <utility>
 #include <map>
 #include <any>
-
+#include <ctime>
 #include "tensor.hpp"
+
+
+
+
+const auto start_time = std::chrono::high_resolution_clock::now();
+
+std::ostream& pt(std::ostream& os = std::cout) {
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    os << "+" << duration << "ms ";
+    return os;
+}
+
+void progressbar(int current, int total)
+{
+    float progress = (float)current / total;
+    int barWidth = 70;
+
+    std::cout << "[";
+    int pos = barWidth * progress;
+    for (int i = 0; i < barWidth; ++i)
+    {
+        if (i < pos)
+            std::cout << "=";
+        else if (i == pos)
+            std::cout << ">";
+        else
+            std::cout << " ";
+    }
+    pt() << "] " << int(progress * 100.0) << " % " << current << "/" << total << " \r";
+    std::cout.flush();
+}
+
+
 
 namespace nn :: function{
     template<typename T, int ColN>
@@ -280,14 +314,20 @@ public:
 
         Tensor<T, c, h, w> next_grad;
 
+        pt() << "kernel_grad complete\n";
+
         for (int i = 0; i < oc;  i++){
             
             auto bPRKi = _get_blocks<2*pah - dkh, 2*paw - dkw ,pah, paw>(_prk_i<h,w>(i)).template reshape<oh * ow, c * h * w>();
+            // pt() << "next_Grad get complete\n";
 
             auto xGrad = grad.extractSubdimension(i).template reshape<1, oh * ow>();
+            // pt() << "next_Grad prep complete\n";
 
             next_grad += (xGrad * bPRKi).template reshape<c, h ,w>();
+            // pt() << "next_Grad mult complete\n";
         }
+        // pt() << "next_Grad complete\n";
 
         return next_grad;
 
