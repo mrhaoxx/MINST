@@ -30,7 +30,7 @@ void progressbar(int current, int total)
     float progress = (float)current / total;
     int barWidth = 70;
 
-    std::cout << "[";
+    pt() << "[";
     int pos = barWidth * progress;
     for (int i = 0; i < barWidth; ++i)
     {
@@ -41,7 +41,7 @@ void progressbar(int current, int total)
         else
             std::cout << " ";
     }
-    pt() << "] " << int(progress * 100.0) << " % " << current << "/" << total << " \r";
+    std::cout << "] " << int(progress * 100.0) << " % " << current << "/" << total << " \r";
     std::cout.flush();
 }
 
