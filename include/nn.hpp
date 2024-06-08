@@ -78,12 +78,11 @@ public:
 
     //backward
     Tensor<T, RowN> backward(const Tensor<T, RowN>& input, const Tensor<T, ColN>& grad) {
-        std::cout << "input: " << input << std::endl;
-        std::cout << "grad: " << grad << std::endl;
+        // std::cout << "input: " << input << std::endl;
               bias_grad = grad;
-                std::cout << "bgrad_saved";
+                // std::cout << "bgrad_saved";
         weights_grad = input.template reshape<1, RowN>().transpose() * grad.template reshape<1, ColN>();
-                std::cout << "grad_saved";
+                // std::cout << "grad_saved";
   
 
         return (grad.template reshape<1, ColN>() * weights.transpose()).template reshape<RowN>();
