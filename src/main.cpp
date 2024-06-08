@@ -24,8 +24,8 @@ int main()
 
     while (!loader.eof())
     {
-        auto [imgs, labels] = loader.read<1000>();
-        for (int i = 0; i < 1000; i++)
+        auto [imgs, labels] = loader.read<10>();
+        for (int i = 0; i < 10; i++)
         {
             images_train.push_back(Image<uint8_t, 28, 28>(imgs[i]).reshape<784>().scale(1.0 / 255.0));
             labels_train.push_back(nn::function::onehot<double, 10>(Tensor<double, 1>({double(labels[i])})));
@@ -34,8 +34,8 @@ int main()
 
     while (!loader_test.eof())
     {
-        auto [imgs, labels] = loader_test.read<1000>();
-        for (int i = 0; i < 1000; i++)
+        auto [imgs, labels] = loader_test.read<10>();
+        for (int i = 0; i < 10; i++)
         {
             images_test.push_back(Image<uint8_t, 28, 28>(imgs[i]).reshape<784>().scale(1.0 / 255.0));
             labels_test.push_back(labels[i]);
