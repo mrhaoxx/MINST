@@ -95,13 +95,13 @@ int main()
         double total_loss = 0;
         int total_train = 0;
 
-        for (int i = 0; i < 1200; i++)
+        for (int i = 0; i < 10; i++)
         {
 
             auto image = images_train[i];
             auto label = labels_train[i];
          
-            auto dl1 = l1.forward(image.reshape<1, 28, 28>());
+            auto dl1 = l1.forward(image);
             auto dl2 = l2.forward(dl1);
             auto dl3 = l3.forward(dl2);
             auto dl4 = l4.forward(dl3);
@@ -130,7 +130,7 @@ int main()
             auto _dl4 = l4.backward(dl3, _dl5);
             auto _dl3 = l3.backward(dl2, _dl4);
             auto _dl2 = l2.backward(dl1, _dl3);
-            auto _dl1 = l1.backward(image.reshape<1,28,28>(), _dl2);
+            auto _dl1 = l1.backward(image, _dl2);
 
 
 
@@ -175,8 +175,21 @@ int main()
             auto image = images_test[i];
             auto label = labels_test[i];
 
-            auto act = seq.forward(image);
+            auto dl1 = l1.forward(image);
+            auto dl2 = l2.forward(dl1);
+            auto dl3 = l3.forward(dl2);
+            auto dl4 = l4.forward(dl3);
+            auto dl5 = l5.forward(dl4);
+            auto dl6 = l6.forward(dl5);
+            auto dl7 = l7.forward(dl6);
+            auto dl8 = l8.forward(dl7);
+            auto dl9 = l9.forward(dl8);
+            auto dl10 = l10.forward(dl9);
+            auto dl11 = l11.forward(dl10);
+            auto act = l12.forward(dl11);
 
+            std::cout << dl1 << dl2 << dl3 << dl4 << dl5 << dl6 << dl7 << dl8 << dl9 << dl10 << dl11 << act << std::endl;
+            
             auto max_idx = std::distance((*act.data).begin(), std::max_element((*act.data).begin(), (*act.data).end()));
 
             if (max_idx == label)
