@@ -9,6 +9,7 @@
 #include <cstring>
 #include <utility>
 #include <map>
+#include <chrono>
 #include <any>
 #include <ctime>
 #include "tensor.hpp"
