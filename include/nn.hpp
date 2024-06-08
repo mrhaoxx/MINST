@@ -293,20 +293,20 @@ public:
         Tensor<T, c, h, w> next_grad;
 
         for (int i = 0; i < oc;  i++){
-            std::cout << i << std::endl;
-            auto PRKi = this->_prk_i<h,w>(i);
-            std::cout << PRKi << std::endl;
-            auto bPRKi = _get_blocks<2*pah - dkh, 2*paw - dkw ,pah, paw>(PRKi).template reshape<oh * ow, c * h * w>();
-            std::cout << bPRKi << std::endl;
-            auto xGrad = grad.extractSubdimension(i).template reshape<1, oh * ow>();
-            std::cout << xGrad << std::endl;
-            auto tmp = (xGrad * bPRKi).template reshape<c, h ,w>();
+            
+            auto bPRKi = _get_blocks<2*pah - dkh, 2*paw - dkw ,pah, paw>(_prk_i<h,w>(i)).template reshape<oh * ow, c * h * w>();
 
-            next_grad += tmp;
+            auto xGrad = grad.extractSubdimension(i).template reshape<1, oh * ow>();
+
+            next_grad += (xGrad * bPRKi).template reshape<c, h ,w>();
         }
 
         return next_grad;
 
+    }
+    
+    void step(T learning_rate) {
+        kernel -= kernel_grad * learning_rate;
     }
 
 

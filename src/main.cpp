@@ -45,15 +45,17 @@ int main()
     std::print("Loaded {} images for train\n", images_train.size());
     std::print("Loaded {} images for test\n", images_test.size());
 
+
     srand(42);
 
     Conv2d<double, 1, 32, 3, 3, 1, 1> c1(random<double, 32, 9>());
 
     auto in = images_train[0].reshape<1, 28, 28>();
-    auto ttt =  c1.forward(in);
-    std::cout << ttt;
-    std::cout << c1.backward(in, ttt);
-    std::cout << ttt << Tensor<int,2,2,2>({1,2,3,4,5,6,7,8}).rotate<180>() << std::endl;
+
+    // auto ttt =  c1.forward(in);
+    // std::cout << ttt;
+    // std::cout << c1.backward(in, ttt);
+    // std::cout << ttt << std::endl;
 
     Linear l1(random<double, 784, 128>(), random<double, 1, 128>());
     ReLU<double, 1, 128> r1;
