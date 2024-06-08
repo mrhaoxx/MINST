@@ -52,6 +52,15 @@ int main()
 
     auto in = images_train[0].reshape<1, 28, 28>();
 
+
+    auto rnd = Tensor<double,1, 3, 3>({1, 2, 3, 4, 10, 6, 7, 8, 9});
+    std::cout << rnd;
+
+    MaxPool2d<double, 1, 3, 1, 1> mp1;
+
+    auto fo =  mp1.forward(rnd);
+    std::cout << fo;
+    std::cout << mp1.backward(rnd, fo);
     // auto ttt =  c1.forward(in);
     // std::cout << ttt;
     // std::cout << c1.backward(in, ttt);

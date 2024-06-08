@@ -199,19 +199,19 @@ public:
 
 
 
-template<typename T, int RowN, int ColN>
+template<typename T, int ...dims>
 class ReLU {
 public:
     ReLU() {}
     ~ReLU() = default;
 
-    Tensor<T, RowN, ColN> forward(const Tensor<T, RowN, ColN>& input) {
+    Tensor<T, dims...> forward(const Tensor<T, dims...>& input) {
         return nn::function::relu(input);
     }
 
-    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& grad) {
-        Tensor<T, RowN, ColN> result;
-        for (int i = 0; i < RowN * ColN; i++) {
+    Tensor<T, dims...> backward(const Tensor<T, dims...>& input, const Tensor<T, dims...>& grad) {
+        Tensor<T, dims...> result;
+        for (int i = 0; i < (dims * ... ); i++) {
             result.data[i] = input.data[i] > 0 ? grad.data[i] : 0;
         }
         return result;
@@ -275,9 +275,7 @@ public:
 //(c,2*pah-dkh,2*paw-dkw,pah,paw,sh,sw,oh,ow)
 
     template<int h, int w,int oh, int ow>
-    auto backward(const Tensor<T, c, h, w>& input, const Tensor<T, oc, oh, ow>& grad) {
-        std::cout << "backward" << std::endl;
-        
+    auto backward(const Tensor<T, c, h, w>& input, const Tensor<T, oc, oh, ow>& grad) {        
         static_assert( oh == (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1);
         static_assert( ow == (w + 2 * pw - ((kw - 1)*dw + 1)) / sw + 1);
         constexpr int pah = h + 2*ph;
@@ -287,8 +285,6 @@ public:
 
 
         kernel_grad = grad.template reshape<oc, oh * ow>() * this->_get_blocks(input).template reshape<oh * ow, c * kh * kw>();
-
-        std::cout << kernel_grad << std::endl;
 
         Tensor<T, c, h, w> next_grad;
 
@@ -385,5 +381,67 @@ public:
 private:
     std::tuple<Layers&...> layers;
     std::vector<std::any> layer_inputs;
+
+};
+
+
+template<typename T, int kh, int kw, int sh, int sw>
+class MaxPool2d {
+public:
+    MaxPool2d() {}
+    ~MaxPool2d() = default;
+
+    template<int c, int h, int w>
+    auto forward(const Tensor<T, c, h, w>& input) {
+
+        constexpr int oh = (h - kh) / sh + 1;
+        constexpr int ow = (w - kw) / sw + 1;
+
+        Tensor<T,c, oh, ow> result;
+
+        for (int i = 0; i < oh; i++) {
+            for (int j = 0; j < ow; j++) {
+                for (int k = 0; k < c; k++) {
+                    T max = input.data[k * h * w + i * sh * w + j * sw];
+                    for (int l = 0; l < kh; l++) {
+                        for (int m = 0; m < kw; m++) {
+                            max = std::max(max, input.data[k * h * w + (i * sh + l) * w + j * sw + m]);
+                        }
+                    }
+                    result.data[k * oh * ow + i * ow + j] = max;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    template<int c, int h, int w, int oh, int ow>
+    auto backward(const Tensor<T, c, h, w>& input, const Tensor<T, c, oh, ow>& grad) {
+        static_assert(oh == (h - kh) / sh + 1);
+        static_assert(ow == (w - kw) / sw + 1);
+
+        Tensor<T, c, h, w> result;
+
+        for (int i = 0; i < oh; i++) {
+            for (int j = 0; j < ow; j++) {
+                for (int k = 0; k < c; k++) {
+                    T max = input.data[k * h * w + i * sh * w + j * sw];
+                    int max_idx = 0;
+                    for (int l = 0; l < kh; l++) {
+                        for (int m = 0; m < kw; m++) {
+                            if (input.data[k * h * w + (i * sh + l) * w + j * sw + m] > max) {
+                                max = input.data[k * h * w + (i * sh + l) * w + j * sw + m];
+                                max_idx = l * kw + m;
+                            }
+                        }
+                    }
+                    result.data[k * h * w + (i * sh + max_idx / kw) * w + j * sw + max_idx % kw] = grad.data[k * oh * ow + i * ow + j];
+                }
+            }
+        }
+
+        return result;
+    }
 
 };
