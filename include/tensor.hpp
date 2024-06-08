@@ -17,12 +17,46 @@ public:
         return std::get<n>(std::make_tuple(dims...));
     }
     
-    std::array<T, (sizeof...(dims) > 0 ? (dims * ...) : 1)> data;
+    std::shared_ptr<std::array<T, (sizeof...(dims) > 0 ? (dims * ...) : 1)>> real_data;
+    std::array<T, (sizeof...(dims) > 0 ? (dims * ...) : 1)>& data;
 
+    // Default constructor
+    Tensor()
+        : real_data(std::make_shared<std::array<T, (dims * ...)>>()), data(*real_data) {}
 
-    Tensor() : data() {}
-    explicit Tensor(std::array<T, (dims * ...)> data): data(std::move(data)) {}
+    // Constructor with data initialization
+    explicit Tensor(const std::array<T, (dims * ...)>& init_data)
+        : real_data(std::make_shared<std::array<T, (dims * ...)>>(init_data)), data(*real_data) {}
+
+    // Copy constructor
+    Tensor(const Tensor& other)
+        : real_data(other.real_data), data(*real_data) {}
+
+    // Assignment operator
+    auto operator=(const Tensor& other) -> Tensor& {
+        if (this != &other) {
+            real_data = other.real_data;
+            data = *real_data;
+        }
+        return *this;
+    }
+
+    // Move constructor
+    Tensor(Tensor&& other) noexcept
+        : real_data(std::move(other.real_data)), data(*real_data) {}
+
+    // Move assignment operator
+    auto operator=(Tensor&& other) noexcept -> Tensor& {
+        if (this != &other) {
+            real_data = std::move(other.real_data);
+            data = *real_data;
+        }
+        return *this;
+    }
+
+    // Destructor
     virtual ~Tensor() = default;
+
 
     template<typename U>
     Tensor<U, dims...> scale(U scale) const {
