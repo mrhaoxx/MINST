@@ -49,8 +49,11 @@ int main()
 
     Conv2d<double, 1, 32, 3, 3, 1, 1> c1(random<double, 32, 9>());
 
-    auto ttt =  c1.forward(images_train[0].reshape<1, 28, 28>());
+    auto in = images_train[0].reshape<1, 28, 28>();
+    auto ttt =  c1.forward(in);
     std::cout << ttt;
+    std::cout << c1.backward(in, ttt);
+    std::cout << ttt << Tensor<int,2,2,2>({1,2,3,4,5,6,7,8}).rotate<180>() << std::endl;
 
     Linear l1(random<double, 784, 128>(), random<double, 1, 128>());
     ReLU<double, 1, 128> r1;

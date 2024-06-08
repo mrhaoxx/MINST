@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#include <span>
+#include <mdspan>
 #include <tuple>
 #include <cassert>
 #include <iostream>
@@ -111,6 +111,10 @@ public:
         return Tensor<T, new_dims...>(data);
     }
 
+    auto span() const {
+        return std::mdspan(data.data(), dimensions);
+    }
+    
 
     template<size_t... Is>
     auto extractSubdimensionImpl(int index, std::index_sequence<Is...>) const {
@@ -146,6 +150,91 @@ public:
 
         return Tensor<T, cols, rows>(transposed_data);
     }
+
+/*
+   def _rotpi(self,x):
+        if x.ndim==3:
+            return x[:,::-1,::-1]
+        return x[:,:,::-1,::-1]
+*/
+    template<int degree>
+    Tensor rotate() const {
+        static_assert(degree  == 180);
+        static_assert(sizeof...(dims) == 3 || sizeof...(dims) == 2);
+
+        if constexpr (sizeof...(dims) == 3) {
+            constexpr int channels = dimensions[0];
+            constexpr int rows = dimensions[1];
+            constexpr int cols = dimensions[2];
+            std::array<T, (dims * ...)> rotated_data;
+
+            for (int i = 0; i < channels; ++i) {
+                for (int j = 0; j < rows; ++j) {
+                    for (int k = 0; k < cols; ++k) {
+                        rotated_data[i * rows * cols + j * cols + k] = data[i * rows * cols + (rows - j - 1) * cols + (cols - k - 1)];
+                    }
+                }
+            }
+
+            return Tensor<T, channels, rows, cols>(rotated_data);
+        } else if constexpr (sizeof...(dims) == 2) {
+            constexpr int rows = dimensions[0];
+            constexpr int cols = dimensions[1];
+            std::array<T, (dims * ...)> rotated_data;
+
+            for (int i = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j) {
+                    rotated_data[(rows - i - 1) * cols + (cols - j - 1)] = data[i * cols + j];
+                }
+            }
+
+            return Tensor<T, rows, cols>(rotated_data);
+        }
+    }
+
+    template<int pr, int pc>
+    auto pad() const {
+        static_assert(sizeof...(dims) == 2 || sizeof...(dims) == 3);
+
+        if constexpr (sizeof...(dims) == 2) {
+            constexpr int rows = dimensions[0];
+            constexpr int cols = dimensions[1];
+            std::array<T,  (rows + 2 * pr) * (cols + 2 *pc)> padded_data;
+
+            for (int i = 0; i < rows + 2 * pr; ++i) {
+                for (int j = 0; j < cols + 2 * pc; ++j) {
+                    if (i < pr || i >= rows + pr || j < pc || j >= cols + pc) {
+                        padded_data[i * (cols + 2 * pc) + j] = 0;
+                    } else {
+                        padded_data[i * (cols + 2 * pc) + j] = data[(i - pr) * cols + (j - pc)];
+                    }
+                }
+            }
+
+            return Tensor<T, (rows + 2 * pr),(cols + 2 * pc)>(padded_data);
+        } else if constexpr (sizeof...(dims) == 3) {
+            constexpr int channels = dimensions[0];
+            constexpr int rows = dimensions[1];
+            constexpr int cols = dimensions[2];
+            std::array<T, channels * (rows + 2 * pr) * (cols + 2 * pc)> padded_data;
+
+            for (int i = 0; i < channels; ++i) {
+                for (int j = 0; j < rows + 2 * pr; ++j) {
+                    for (int k = 0; k < cols + 2 * pc; ++k) {
+                        if (j < pr || j >= rows + pr || k < pc || k >= cols + pc) {
+                            padded_data[i * (rows + 2 * pr) * (cols + 2 * pc) + j * (cols + 2 * pc) + k] = 0;
+                        } else {
+                            padded_data[i * (rows + 2 * pr) * (cols + 2 * pc) + j * (cols + 2 * pc) + k] = data[i * rows * cols + (j - pr) * cols + (k - pc)];
+                        }
+                    }
+                }
+            }
+
+            return Tensor<T, channels, (rows + 2 * pr), (cols + 2 * pc)>(padded_data);
+        }
+
+    }
+
 
     std::ostream&  print(std::ostream& os, const std::string& indent = "", int depth = 0, int w = 4) const {
         os << indent << "[";

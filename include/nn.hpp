@@ -229,18 +229,18 @@ public:
     Conv2d(const Tensor<T, oc, c * kh * kw>& kernel) : kernel(kernel) {}
     ~Conv2d() = default;
 
-    template<int h, int w>
+    template<int h, int w, int _kh = kh, int _kw = kw>
     auto _get_blocks(const Tensor<T, c, h, w>& input) {
-        constexpr int oh = (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1;
-        constexpr int ow = (w + 2 * pw - ((kw - 1)*dw + 1)) / sw + 1;
-        Tensor<T, oh, ow, c, kh * kw> _tmp;
+        constexpr int oh = (h + 2 * ph - ((_kh - 1)*dh + 1)) / sh + 1;
+        constexpr int ow = (w + 2 * pw - ((_kw - 1)*dw + 1)) / sw + 1;
+        Tensor<T, oh, ow, c, _kh * _kw> _tmp;
         for (int i = 0; i < oh; i++) {
             for (int j = 0; j < ow; j++) { // feature map
                 for (int k = 0; k < c; k++){
                     std::memcpy(
-                        &_tmp.data[i * ow * c * kh * kw + j * c * kh * kw + k * kh * kw], 
+                        &_tmp.data[i * ow * c * _kh * _kw + j * c * _kh * _kw + k * _kh * _kw], 
                         &input.data[k * h * w + i * sh * w + j * sw], 
-                        kh * kw * sizeof(T)
+                        _kh * _kw * sizeof(T)
                         );
                 }
 
@@ -249,6 +249,12 @@ public:
         return _tmp;
     }
     
+    template<int h, int w>
+    auto _prk_i(int i){
+        return kernel.template reshape<oc, c , kh, kw>().extractSubdimension(i).template rotate<180>().template pad<h - kh,w - kw>();
+    }
+    
+
     template<int h, int w>
     auto forward(const Tensor<T, c, h, w>& input) {
         constexpr int oh = (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1;
@@ -265,29 +271,48 @@ public:
         return result.template reshape<oc, oh, ow>();
     }
 
-    template<int h, int w>
-    auto backward(const Tensor<T, c, h, w>& input, const Tensor<T, oc, h, w>& grad) {
-        constexpr int oh = (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1;
-        constexpr int ow = (w + 2 * pw - ((kw - 1)*dw + 1)) / sw + 1;
+//(c,h,w,kh,kw,sh,sw,oh,ow) 
+//(c,2*pah-dkh,2*paw-dkw,pah,paw,sh,sw,oh,ow)
 
-        const auto FA = this->_get_blocks(input).template reshape<oh, ow, c * kh * kw>();;
+    template<int h, int w,int oh, int ow>
+    auto backward(const Tensor<T, c, h, w>& input, const Tensor<T, oc, oh, ow>& grad) {
+        std::cout << "backward" << std::endl;
+        
+        static_assert( oh == (h + 2 * ph - ((kh - 1)*dh + 1)) / sh + 1);
+        static_assert( ow == (w + 2 * pw - ((kw - 1)*dw + 1)) / sw + 1);
+        constexpr int pah = h + 2*ph;
+        constexpr int paw = w + 2*pw;
+        constexpr int dkh = (kh - 1)* dh + 1;
+        constexpr int dkw = (kw - 1)* dw + 1;
 
-        const auto MFAT = FA.template reshape<oh * ow, c * kh * kw>().transpose();
 
-        auto FAT = MFAT.template reshape<c * kh * kw ,oh * ow>();
+        kernel_grad = grad.template reshape<oc, oh * ow>() * this->_get_blocks(input).template reshape<oh * ow, c * kh * kw>();
 
-        auto result = kernel * FAT;
+        std::cout << kernel_grad << std::endl;
 
-        auto grad_reshaped = grad.template reshape<oc, oh * ow>();
+        Tensor<T, c, h, w> next_grad;
 
-        auto kernel_grad = grad_reshaped * FAT.transpose();
+        for (int i = 0; i < oc;  i++){
+            std::cout << i << std::endl;
+            auto PRKi = this->_prk_i<h,w>(i);
+            std::cout << PRKi << std::endl;
+            auto bPRKi = _get_blocks<2*pah - dkh, 2*paw - dkw ,pah, paw>(PRKi).template reshape<oh * ow, c * h * w>();
+            std::cout << bPRKi << std::endl;
+            auto xGrad = grad.extractSubdimension(i).template reshape<1, oh * ow>();
+            std::cout << xGrad << std::endl;
+            auto tmp = (xGrad * bPRKi).template reshape<c, h ,w>();
 
-        return kernel_grad.template reshape<oc, c, kh, kw>();
+            next_grad += tmp;
+        }
+
+        return next_grad;
+
     }
 
 
 // private:
     Tensor<T, oc, c * kh * kw> kernel;
+    Tensor<T, oc, c * kh * kw> kernel_grad;
 
 };
 
