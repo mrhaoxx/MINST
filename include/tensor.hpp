@@ -103,7 +103,6 @@ public:
         }
         return *this;
     }
-  
 
     template<int ...new_dims>
     Tensor<T, new_dims...> reshape() const {
@@ -135,20 +134,23 @@ public:
         return extractSubdimensionImpl(index, std::make_index_sequence<sizeof...(dims) - 1>());
     }
 
+
     auto transpose() const {
-        static_assert(sizeof...(dims) == 2);
+        static_assert(sizeof...(dims) == 2 || sizeof...(dims) == 1);
 
-        constexpr int rows = dimensions[0];
-        constexpr int cols = dimensions[1];
-        std::array<T, (dims * ...)> transposed_data;
+        if constexpr (sizeof...(dims) == 2) {
+            constexpr int rows = dimensions[0];
+            constexpr int cols = dimensions[1];
+            std::array<T, (dims * ...)> transposed_data;
 
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                transposed_data[j * rows + i] = data[i * cols + j];
+            for (int i = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j) {
+                    transposed_data[j * rows + i] = data[i * cols + j];
+                }
             }
-        }
 
-        return Tensor<T, cols, rows>(transposed_data);
+            return Tensor<T, cols, rows>(transposed_data);
+        }
     }
 
 /*

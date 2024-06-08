@@ -14,24 +14,22 @@
 #include "tensor.hpp"
 
 namespace nn :: function{
-    template<typename T, int RowN, int ColN>
-    Tensor<T, RowN, ColN> softmax(const Tensor<T, RowN, ColN>& m) {
-        Tensor<T, RowN, ColN> result;
-        for (int i = 0; i < RowN; i++) {
-            T max = m.data[i * ColN];
-            for (int j = 1; j < ColN; j++) {
-                if (m.data[i * ColN + j] > max) {
-                    max = m.data[i * ColN + j];
-                }
+    template<typename T, int ColN>
+    Tensor<T, ColN> softmax(const Tensor<T, ColN>& m) {
+        Tensor<T, ColN> result;
+        T max = m.data[0];
+        for (int j = 1; j < ColN; j++) {
+            if (m.data[j] > max) {
+                max = m.data[j];
             }
-            T sum = 0;
-            for (int j = 0; j < ColN; j++) {
-                result.data[i * ColN + j] = std::exp(m.data[i * ColN + j] - max);
-                sum += result.data[i * ColN + j];
-            }
-            for (int j = 0; j < ColN; j++) {
-                result.data[i * ColN + j] /= sum;
-            }
+        }
+        T sum = 0;
+        for (int j = 0; j < ColN; j++) {
+            result.data[j] = std::exp(m.data[j] - max);
+            sum += result.data[j];
+        }
+        for (int j = 0; j < ColN; j++) {
+            result.data[j] /= sum;
         }
         return result;
     }
@@ -46,50 +44,46 @@ namespace nn :: function{
         return result;
     }
     
-    template<typename T, int RowN, int ColN>
-    Tensor<T, RowN, ColN> onehot(const Tensor<T, RowN, 1>& m) {
-        Tensor<T, RowN, ColN> result;
-        for (int i = 0; i < RowN; i++) {
-            for (int j = 0; j < ColN; j++) {
-                result.data[i * ColN + j] = (j == m.data[i]);
-            }
+    template<typename T, int ColN>
+    Tensor<T, ColN> onehot(const Tensor<T, 1>& m) {
+        Tensor<T, ColN> result;
+        for (int j = 0; j < ColN; j++) {
+            result.data[j] = (j == m.data[0]);
         }
         return result;
     }
 
-    template<typename T, int RowN, int ColN>    
-    Tensor<T, RowN, ColN> relu(const Tensor<T, RowN, ColN>& m) {
-        Tensor<T, RowN, ColN> result;
-        for (int i = 0; i < RowN; i++) {
-            for (int j = 0; j < ColN; j++) {
-                result.data[i * ColN + j] = m.data[i * ColN + j] > 0 ? m.data[i * ColN + j] : 0;
-            }
+    template<typename T, int ...dims>    
+    Tensor<T, dims...> relu(const Tensor<T, dims...>& m) {
+        Tensor<T, dims...> result;
+        for (int i = 0; i < (dims * ...); i++) {
+            result.data[i] = m.data[i] > 0 ? m.data[i] : 0;
         }
         return result;
     }
             
 }
 
-template<typename T, int RowN, int ColN, int ColN_B>
+template<typename T, int RowN, int ColN>
 class Linear {
 public:
     Linear() {
         weights = Tensor<T, RowN, ColN>(std::array<T, RowN * ColN>());
-        bias = Tensor<T, ColN_B, ColN>(std::array<T, ColN * ColN_B>());
+        bias = Tensor<T, ColN>(std::array<T, ColN>());
     }
-    Linear(const Tensor<T, RowN, ColN>& w, const Tensor<T, ColN_B, ColN>& b) : weights(w), bias(b){
+    Linear(const Tensor<T, RowN, ColN>& w, const Tensor<T, ColN>& b) : weights(w), bias(b){
     }
     ~Linear() = default;
 
-    Tensor<T, ColN_B, ColN> forward(const Tensor<T, ColN_B, RowN>& input) {
-        return input * weights + bias;
+    Tensor<T, ColN> forward(const Tensor<T, RowN>& input) {
+        return (input.template reshape<1, RowN>() * weights).template reshape<ColN>() + bias;
     }
 
     //backward
-    Tensor<T, ColN_B, RowN> backward(const Tensor<T, ColN_B, RowN>& input, const Tensor<T,ColN_B, ColN>& grad) {
-        weights_grad = input.transpose() * grad;
+    Tensor<T, RowN> backward(const Tensor<T, RowN>& input, const Tensor<T, ColN>& grad) {
+        weights_grad = input.template reshape<1, RowN>().transpose() * grad.template reshape<1, ColN>();
         bias_grad = grad;
-        return grad * weights.transpose();
+        return (grad.template reshape<1, ColN>() * weights.transpose()).template reshape<RowN>();
     }
 
     void step(T learning_rate) {
@@ -99,7 +93,7 @@ public:
 
     Linear& zero_grad() {
         std::memset(weights_grad.data.data(), 0, sizeof(T) * RowN * ColN);
-        std::memset(bias_grad.data.data(), 0, sizeof(T) * ColN_B * ColN);
+        std::memset(bias_grad.data.data(), 0, sizeof(T) * ColN);
         return *this;
     }
 
@@ -108,12 +102,12 @@ public:
 
 // private:
     Tensor<T, RowN, ColN> weights;
-    Tensor<T, ColN_B, ColN> bias;
+    Tensor<T, ColN> bias;
     Tensor<T, RowN, ColN> weights_grad;
-    Tensor<T, ColN_B, ColN> bias_grad;
+    Tensor<T, ColN> bias_grad;
 };
 
-template<typename T, int RowN, int ColN>
+template<typename T, int ...dims>
 class Dropout {
 public:
     Dropout(int p):p(p) {
@@ -121,45 +115,45 @@ public:
     }
     ~Dropout() = default;
 
-    Tensor<T, RowN, ColN> forward(const Tensor<T, RowN, ColN>& input) {
-        Tensor<T, RowN, ColN> result;
-        for (int i = 0; i < RowN * ColN; i++) {
+    Tensor<T, dims...>  forward(const Tensor<T, dims...>& input) {
+        Tensor<T, dims...> result;
+        for (int i = 0; i < (dims * ...); i++) {
             result.data[i] = input.data[i] * dropout_mask.data[i];
         }
 
         return result;
     }
 
-    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& grad) {
-        Tensor<T, RowN, ColN> result;
-        for (int i = 0; i < RowN * ColN; i++) {
+    Tensor<T, dims...> backward(const Tensor<T, dims...>& input, const Tensor<T, dims...>& grad) {
+        Tensor<T, dims...> result;
+        for (int i = 0; i < (dims * ...); i++) {
             result.data[i] = grad.data[i] * dropout_mask.data[i];
         }
         return result;
     }
 
     void reset() {
-        for (int i = 0; i < RowN * ColN; i++) {
+        for (int i = 0; i <  (dims * ...); i++) {
             dropout_mask.data[i] = (rand() % 100) < p ? 0 : 1;
         }
     }
 
     int p;
-    Tensor<T, RowN, ColN> dropout_mask;
+    Tensor<T,dims...> dropout_mask;
     
 };
 
-template<typename T, int RowN, int ColN>
+template<typename T, int ColN>
 class Softmax {
 public:
     Softmax() {}
     ~Softmax() = default;
 
-    Tensor<T, RowN, ColN> forward(const Tensor<T, RowN, ColN>& input) {
+    Tensor<T, ColN> forward(const Tensor<T, ColN>& input) {
         return nn::function::softmax(input);
     }
 
-    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& grad) {
+    Tensor<T, ColN> backward(const Tensor<T, ColN>& input, const Tensor<T, ColN>& grad) {
         return grad;
     }
 
@@ -168,29 +162,25 @@ public:
 };
 
 
-template<typename T, int RowN, int ColN>
+template<typename T, int ColN>
 class CrossEntropy {
 public:
     CrossEntropy() {}
     ~CrossEntropy() = default;
 
-    T forward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& target) {
+    T forward(const Tensor<T, ColN>& input, const Tensor<T, ColN>& target) {
         T loss = 0;
-        for (int i = 0; i < RowN; i++) {
-            for (int j = 0; j < ColN; j++) {
-                loss += target.data[i * ColN + j] * std::log(input.data[i * ColN + j]);
-            }
+        for (int j = 0; j < ColN; j++) {
+            loss += target.data[j] * std::log(input.data[j]);
         }
         return -loss;
     }
 
     //backward
-    Tensor<T, RowN, ColN> backward(const Tensor<T, RowN, ColN>& input, const Tensor<T, RowN, ColN>& target) {
-        Tensor<T, RowN, ColN> result;
-        for (int i = 0; i < RowN; i++) {
-            for (int j = 0; j < ColN; j++) {
-                result.data[i * ColN + j] = -target.data[i * ColN + j] + input.data[i * ColN + j];
-            }
+    Tensor<T, ColN> backward(const Tensor<T, ColN>& input, const Tensor<T, ColN>& target) {
+        Tensor<T, ColN> result;
+        for (int j = 0; j < ColN; j++) {
+            result.data[j] = -target.data[j] + input.data[j];
         }
         return result;
     }
@@ -315,6 +305,9 @@ public:
 template<typename T>
 struct input_type_trait;
 
+template<typename T>
+struct input_type_trait;
+
 template<typename ClassType, typename ReturnType, typename ArgType>
 struct input_type_trait<ReturnType(ClassType::*)(ArgType)> {
     using type = ArgType;
@@ -336,8 +329,8 @@ public:
 
     ~Sequential() = default;
 
-    template<int RowN, int ColN>
-    auto forward(const Tensor<double, RowN, ColN>& input) {
+    template<int ...dims>
+    auto forward(const Tensor<double, dims...>& input) {
         layer_inputs.clear();
         layer_inputs.push_back(input);
         return forward_helper(input, layers);
@@ -442,6 +435,24 @@ public:
         }
 
         return result;
+    }
+
+};
+
+template<typename T>
+class Flatten {
+public:
+    Flatten() {}
+    ~Flatten() = default;
+
+    template<int ...dims>
+    auto forward(const Tensor<T, dims...>& input) {
+        return input.template reshape<(dims * ... )>();
+    }
+
+    template<int ...dims>
+    auto backward(const Tensor<T, dims...>& input, const Tensor<T, (dims * ... )>& grad) {
+        return grad.template reshape<dims...>();
     }
 
 };
