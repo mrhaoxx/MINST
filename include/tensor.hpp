@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <mdspan>
 #include <tuple>
 #include <cassert>
 #include <iostream>
@@ -16,40 +15,40 @@ public:
     constexpr int shape() const {
         return std::get<n>(std::make_tuple(dims...));
     }
-    
-    std::shared_ptr<std::array<T, (sizeof...(dims) > 0 ? (dims * ...) : 1)>> real_data;
-    std::array<T, (sizeof...(dims) > 0 ? (dims * ...) : 1)>& data;
+        // Smart pointer to manage the actual data array
+    std::shared_ptr<std::array<T, (sizeof...(dims) > 0 ? (dims * ...) : 1)>> data;
 
     // Default constructor
     Tensor()
-        : real_data(std::make_shared<std::array<T, (dims * ...)>>()), data(*real_data) {}
+        : data(std::make_shared<std::array<T, (dims * ...)>>()) {}
 
     // Constructor with data initialization
     explicit Tensor(const std::array<T, (dims * ...)>& init_data)
-        : real_data(std::make_shared<std::array<T, (dims * ...)>>(init_data)), data(*real_data) {}
+        : data(std::make_shared<std::array<T, (dims * ...)>>(init_data)) {}
+
+    explicit Tensor(const std::shared_ptr<std::array<T, (dims * ...)>>& init_data)
+        : data(init_data) {}
 
     // Copy constructor
     Tensor(const Tensor& other)
-        : real_data(other.real_data), data(*real_data) {}
+        : data(other.data) {}
 
     // Assignment operator
     auto operator=(const Tensor& other) -> Tensor& {
         if (this != &other) {
-            real_data = other.real_data;
-            data = *real_data;
+            data = other.data;
         }
         return *this;
     }
 
     // Move constructor
     Tensor(Tensor&& other) noexcept
-        : real_data(std::move(other.real_data)), data(*real_data) {}
+        : data(std::move(other.data)) {}
 
     // Move assignment operator
     auto operator=(Tensor&& other) noexcept -> Tensor& {
         if (this != &other) {
-            real_data = std::move(other.real_data);
-            data = *real_data;
+            data = std::move(other.data);
         }
         return *this;
     }
@@ -62,7 +61,7 @@ public:
     Tensor<U, dims...> scale(U scale) const {
         std::array<U, (dims * ...)> result_data;
         for (int i = 0; i < (dims * ...); i++) {
-            result_data[i] = static_cast<U>(data[i] * scale);
+            result_data[i] = static_cast<U>((*data)[i] * scale);
         }
         return Tensor<U, dims...>(result_data);
     }
@@ -83,7 +82,7 @@ public:
             for (int j = 0; j < colsB; j++) {
                 T sum = 0;
                 for (int k = 0; k < cols; k++) {
-                    sum += data[i * cols + k] * other.data[k * colsB + j];
+                    sum += (*data)[i * cols + k] * (*other.data)[k * colsB + j];
                 }
                 result_data[i * colsB + j] = sum;
             }
@@ -95,14 +94,14 @@ public:
     Tensor operator* (const T& scalar) const {
         std::array<T, (dims * ...)> result_data;
         for (int i = 0; i < (dims * ...); i++) {
-            result_data[i] = data[i] * scalar;
+            result_data[i] = (*data)[i] * scalar;
         }
         return Tensor<T, dims...>(result_data);
     }
 
    Tensor& operator*= (const T& scalar) {
         for (int i = 0; i < (dims * ...); i++) {
-            data[i] *= scalar;
+            (*data)[i] *= scalar;
         }
         return *this;
     }
@@ -110,14 +109,14 @@ public:
     Tensor operator+ (const Tensor& other)  const {
         std::array<T, (dims * ...)> result_data;
         for (int i = 0; i < (dims * ...); i++) {
-            result_data[i] = data[i] + other.data[i];
+            result_data[i] = (*data)[i] + (*other.data)[i];
         }
         return Tensor<T, dims...>(result_data);
     }
 
     Tensor& operator+= (const Tensor& other) {
         for (int i = 0; i < (dims * ...); i++) {
-            data[i] += other.data[i];
+            (*data)[i] += (*other.data)[i];
         }
         return *this;
     }
@@ -133,7 +132,7 @@ public:
 
     Tensor& operator-= (const Tensor& other) {
         for (int i = 0; i < (dims * ...); i++) {
-            data[i] -= other.data[i];
+            (*data)[i] -= (*other.data)[i];
         }
         return *this;
     }
@@ -144,8 +143,8 @@ public:
         return Tensor<T, new_dims...>(data);
     }
 
-    auto span() const {
-        return std::mdspan(data.data(), dimensions);
+    auto& operator[](int index) const {
+        return (*data)[index];
     }
     
 
@@ -158,7 +157,7 @@ public:
         std::array<T, sub_size> sub_data;
 
         int start = index * sub_size;
-        std::copy_n(data.begin() + start, sub_size, sub_data.begin());
+        std::copy_n((*data).begin() + start, sub_size, sub_data.begin());
 
         return Tensor<T, dimensions[Is + 1]...>(sub_data);
     }
@@ -179,7 +178,7 @@ public:
 
             for (int i = 0; i < rows; ++i) {
                 for (int j = 0; j < cols; ++j) {
-                    transposed_data[j * rows + i] = data[i * cols + j];
+                    transposed_data[j * rows + i] = (*data)[i * cols + j];
                 }
             }
 
@@ -207,7 +206,7 @@ public:
             for (int i = 0; i < channels; ++i) {
                 for (int j = 0; j < rows; ++j) {
                     for (int k = 0; k < cols; ++k) {
-                        rotated_data[i * rows * cols + j * cols + k] = data[i * rows * cols + (rows - j - 1) * cols + (cols - k - 1)];
+                        rotated_data[i * rows * cols + j * cols + k] = (*data)[i * rows * cols + (rows - j - 1) * cols + (cols - k - 1)];
                     }
                 }
             }
@@ -260,7 +259,7 @@ public:
                         if (j < pr || j >= rows + pr || k < pc || k >= cols + pc) {
                             padded_data[i * (rows + 2 * pr) * (cols + 2 * pc) + j * (cols + 2 * pc) + k] = 0;
                         } else {
-                            padded_data[i * (rows + 2 * pr) * (cols + 2 * pc) + j * (cols + 2 * pc) + k] = data[i * rows * cols + (j - pr) * cols + (k - pc)];
+                            padded_data[i * (rows + 2 * pr) * (cols + 2 * pc) + j * (cols + 2 * pc) + k] = (*data)[i * rows * cols + (j - pr) * cols + (k - pc)];
                         }
                     }
                 }
@@ -285,7 +284,7 @@ public:
             std::cout << indent;
         } else {
             for (int i = 0; i < dimensions[0]; ++i) {
-                std::cout << " " << std::setw(w) << data[i];
+                std::cout << " " << std::setw(w) << (*data)[i];
             }
         }
         os << "]";
@@ -306,7 +305,7 @@ template<typename T, int ...dims>
 Tensor<T, dims...> random() {
     Tensor<T, dims...> t;
     for (int i = 0; i < (dims * ...); i++) {
-        t.data[i] = static_cast<T>(rand()) / RAND_MAX;
+        t[i] = static_cast<T>(rand()) / RAND_MAX;
     }
     return t;
 }

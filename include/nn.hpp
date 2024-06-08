@@ -17,19 +17,19 @@ namespace nn :: function{
     template<typename T, int ColN>
     Tensor<T, ColN> softmax(const Tensor<T, ColN>& m) {
         Tensor<T, ColN> result;
-        T max = m.data[0];
+        T max = m[0];
         for (int j = 1; j < ColN; j++) {
-            if (m.data[j] > max) {
-                max = m.data[j];
+            if (m[j] > max) {
+                max = m[j];
             }
         }
         T sum = 0;
         for (int j = 0; j < ColN; j++) {
-            result.data[j] = std::exp(m.data[j] - max);
-            sum += result.data[j];
+            result[j] = std::exp(m[j] - max);
+            sum += result[j];
         }
         for (int j = 0; j < ColN; j++) {
-            result.data[j] /= sum;
+            result[j] /= sum;
         }
         return result;
     }
@@ -48,7 +48,7 @@ namespace nn :: function{
     Tensor<T, ColN> onehot(const Tensor<T, 1>& m) {
         Tensor<T, ColN> result;
         for (int j = 0; j < ColN; j++) {
-            result.data[j] = (j == m.data[0]);
+            result[j] = (j == m[0]);
         }
         return result;
     }
@@ -57,7 +57,7 @@ namespace nn :: function{
     Tensor<T, dims...> relu(const Tensor<T, dims...>& m) {
         Tensor<T, dims...> result;
         for (int i = 0; i < (dims * ...); i++) {
-            result.data[i] = m.data[i] > 0 ? m.data[i] : 0;
+            result[i] = m[i] > 0 ? m[i] : 0;
         }
         return result;
     }
@@ -67,10 +67,7 @@ namespace nn :: function{
 template<typename T, int RowN, int ColN>
 class Linear {
 public:
-    Linear() {
-        weights = Tensor<T, RowN, ColN>(std::array<T, RowN * ColN>());
-        bias = Tensor<T, ColN>(std::array<T, ColN>());
-    }
+    Linear() {}
     Linear(const Tensor<T, RowN, ColN>& w, const Tensor<T, ColN>& b) : weights(w), bias(b){
     }
     ~Linear() = default;
@@ -81,8 +78,14 @@ public:
 
     //backward
     Tensor<T, RowN> backward(const Tensor<T, RowN>& input, const Tensor<T, ColN>& grad) {
+        std::cout << "input: " << input << std::endl;
+        std::cout << "grad: " << grad << std::endl;
+              bias_grad = grad;
+                std::cout << "bgrad_saved";
         weights_grad = input.template reshape<1, RowN>().transpose() * grad.template reshape<1, ColN>();
-        bias_grad = grad;
+                std::cout << "grad_saved";
+  
+
         return (grad.template reshape<1, ColN>() * weights.transpose()).template reshape<RowN>();
     }
 
@@ -118,7 +121,7 @@ public:
     Tensor<T, dims...>  forward(const Tensor<T, dims...>& input) {
         Tensor<T, dims...> result;
         for (int i = 0; i < (dims * ...); i++) {
-            result.data[i] = input.data[i] * dropout_mask.data[i];
+            result[i] = input[i] * dropout_mask[i];
         }
 
         return result;
@@ -127,14 +130,14 @@ public:
     Tensor<T, dims...> backward(const Tensor<T, dims...>& input, const Tensor<T, dims...>& grad) {
         Tensor<T, dims...> result;
         for (int i = 0; i < (dims * ...); i++) {
-            result.data[i] = grad.data[i] * dropout_mask.data[i];
+            result[i] = grad[i] * dropout_mask[i];
         }
         return result;
     }
 
     void reset() {
         for (int i = 0; i <  (dims * ...); i++) {
-            dropout_mask.data[i] = (rand() % 100) < p ? 0 : 1;
+            dropout_mask[i] = (rand() % 100) < p ? 0 : 1;
         }
     }
 
@@ -171,7 +174,7 @@ public:
     T forward(const Tensor<T, ColN>& input, const Tensor<T, ColN>& target) {
         T loss = 0;
         for (int j = 0; j < ColN; j++) {
-            loss += target.data[j] * std::log(input.data[j]);
+            loss += target[j] * std::log(input[j]);
         }
         return -loss;
     }
@@ -180,7 +183,7 @@ public:
     Tensor<T, ColN> backward(const Tensor<T, ColN>& input, const Tensor<T, ColN>& target) {
         Tensor<T, ColN> result;
         for (int j = 0; j < ColN; j++) {
-            result.data[j] = -target.data[j] + input.data[j];
+            result[j] = -target[j] + input[j];
         }
         return result;
     }
@@ -202,7 +205,7 @@ public:
     Tensor<T, dims...> backward(const Tensor<T, dims...>& input, const Tensor<T, dims...>& grad) {
         Tensor<T, dims...> result;
         for (int i = 0; i < (dims * ... ); i++) {
-            result.data[i] = input.data[i] > 0 ? grad.data[i] : 0;
+            result[i] = input[i] > 0 ? grad[i] : 0;
         }
         return result;
     }
@@ -228,8 +231,8 @@ public:
             for (int j = 0; j < ow; j++) { // feature map
                 for (int k = 0; k < c; k++){
                     std::memcpy(
-                        &_tmp.data[i * ow * c * _kh * _kw + j * c * _kh * _kw + k * _kh * _kw], 
-                        &input.data[k * h * w + i * sh * w + j * sw], 
+                        &_tmp[i * ow * c * _kh * _kw + j * c * _kh * _kw + k * _kh * _kw], 
+                        &input[k * h * w + i * sh * w + j * sw], 
                         _kh * _kw * sizeof(T)
                         );
                 }
@@ -395,13 +398,13 @@ public:
         for (int i = 0; i < oh; i++) {
             for (int j = 0; j < ow; j++) {
                 for (int k = 0; k < c; k++) {
-                    T max = input.data[k * h * w + i * sh * w + j * sw];
+                    T max = input[k * h * w + i * sh * w + j * sw];
                     for (int l = 0; l < kh; l++) {
                         for (int m = 0; m < kw; m++) {
-                            max = std::max(max, input.data[k * h * w + (i * sh + l) * w + j * sw + m]);
+                            max = std::max(max, input[k * h * w + (i * sh + l) * w + j * sw + m]);
                         }
                     }
-                    result.data[k * oh * ow + i * ow + j] = max;
+                    result[k * oh * ow + i * ow + j] = max;
                 }
             }
         }
@@ -419,17 +422,17 @@ public:
         for (int i = 0; i < oh; i++) {
             for (int j = 0; j < ow; j++) {
                 for (int k = 0; k < c; k++) {
-                    T max = input.data[k * h * w + i * sh * w + j * sw];
+                    T max = input[k * h * w + i * sh * w + j * sw];
                     int max_idx = 0;
                     for (int l = 0; l < kh; l++) {
                         for (int m = 0; m < kw; m++) {
-                            if (input.data[k * h * w + (i * sh + l) * w + j * sw + m] > max) {
-                                max = input.data[k * h * w + (i * sh + l) * w + j * sw + m];
+                            if (input[k * h * w + (i * sh + l) * w + j * sw + m] > max) {
+                                max = input[k * h * w + (i * sh + l) * w + j * sw + m];
                                 max_idx = l * kw + m;
                             }
                         }
                     }
-                    result.data[k * h * w + (i * sh + max_idx / kw) * w + j * sw + max_idx % kw] = grad.data[k * oh * ow + i * ow + j];
+                    result[k * h * w + (i * sh + max_idx / kw) * w + j * sw + max_idx % kw] = grad[k * oh * ow + i * ow + j];
                 }
             }
         }

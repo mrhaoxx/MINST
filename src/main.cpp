@@ -13,10 +13,12 @@
 
 int main()
 {
+
+
     DataLoader<uint8_t, 28, 28, true> loader("../data/train-images-idx3-ubyte", "../data/train-labels-idx1-ubyte");
     DataLoader<uint8_t, 28, 28, true> loader_test("../data/t10k-images-idx3-ubyte", "../data/t10k-labels-idx1-ubyte");
 
-    std::vector<Tensor<double, 1, 28, 28>> images_train;
+    std::vector<Tensor<double, 784>> images_train;
     std::vector<Tensor<double, 10>> labels_train;
 
     std::vector<Tensor<double, 1, 784>> images_test;
@@ -27,7 +29,7 @@ int main()
         auto [imgs, labels] = loader.read<1000>();
         for (int i = 0; i < 1000; i++)
         {
-            images_train.push_back(Image<uint8_t, 28, 28>(imgs[i]).reshape<1, 28, 28>().scale(1.0 / 255.0));
+            images_train.push_back(Image<uint8_t, 28, 28>(imgs[i]).reshape<784>().scale(1.0 / 255.0));
             labels_train.push_back(nn::function::onehot<double, 10>(Tensor<double, 1>({double(labels[i])})));
         }
     }
@@ -45,6 +47,14 @@ int main()
     std::print("Loaded {} images for train\n", images_train.size());
     std::print("Loaded {} images for test\n", images_test.size());
 
+    // test:
+    // {
+    //     auto t1 = images_train[0];
+    //     auto t2 = t1.reshape<28, 28>();
+    //     std::cout << t1.reshape<28, 28>() << t2.pad<1,1>() << std::endl;
+
+    // }
+    // goto test;
 
     srand(42);
 
@@ -62,9 +72,20 @@ int main()
     Softmax<double, 10> l12;
 
     CrossEntropy<double, 10> ce;
+    // Flatten<double> f1;
+    // Linear l1(random<double, 784, 128>(), random<double, 128>());
+    // ReLU<double, 128> r1;
+    // Dropout<double,128> d1(20);
+    // Linear l2(random<double, 128, 10>(), random<double, 10>());
+    // Softmax<double, 10> s1;
+
+    // CrossEntropy<double, 10> ce;
+
+    // Sequential seq(l1, r1, d1, l2, s1);
 
 
-    Sequential seq(l1, l2, l3, l4, l5, l6, l7, l8, l9, l10, l11, l12);
+
+    // Sequential seq(l1, l2, l3, l4, l5, l6, l7, l8, l9, l10, l11, l12);
 
     for (int step = 0; step < 100; step++)
     {
@@ -79,7 +100,7 @@ int main()
             auto image = images_train[i];
             auto label = labels_train[i];
          
-            auto dl1 = l1.forward(image);
+            auto dl1 = l1.forward(image.reshape<1, 28, 28>());
             auto dl2 = l2.forward(dl1);
             auto dl3 = l3.forward(dl2);
             auto dl4 = l4.forward(dl3);
@@ -94,7 +115,11 @@ int main()
 
             auto loss = ce.forward(act, label);
 
+            std::cout << act << "   " << loss << "   "  << label << std::endl;
+
             auto _dact = ce.backward(act, label);
+
+            std::cout << _dact << std::endl;
             auto _dl11 = l11.backward(dl10, _dact);
             auto _dl10 = l10.backward(dl9, _dl11);
             auto _dl9 = l9.backward(dl8, _dl10);
@@ -105,26 +130,28 @@ int main()
             auto _dl4 = l4.backward(dl3, _dl5);
             auto _dl3 = l3.backward(dl2, _dl4);
             auto _dl2 = l2.backward(dl1, _dl3);
-            auto _dl1 = l1.backward(image, _dl2);
+            auto _dl1 = l1.backward(image.reshape<1,28,28>(), _dl2);
 
 
             
             // auto act = seq.forward(image);
             // auto loss = ce.forward(act, label);
 
-            // seq.backward(ce.backward(act, label));
-
-            // l12.backward(seq. ,ce.backward(act, label));
+            // auto dact = ce.backward(act, label);
+            // seq.backward(dact);
 
             l1.step(0.005);
-            l3.step(0.005);
-            l8.step(0.005);
-            l11.step(0.005);
+            l2.step(0.005);
+
+            // l1.step(0.005);
+            // l3.step(0.005);
+            // l8.step(0.005);
+            // l11.step(0.005);
 
             total_loss += loss;
             total_train++;
 
-            std::cout << act << loss << std::endl;
+            std::cout << act << "   " << loss << std::endl;
             // std::cout << img << int(b) << std::endl;
             // std::cout << l1r <<act << label;
         }
